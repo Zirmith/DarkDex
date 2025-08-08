@@ -1,0 +1,46 @@
+{
+  "name": "darkdex",
+  "version": "1.0.0",
+  "description": "A dark-themed offline-capable Pokédex desktop application inspired by Shadow Lugia",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never"
+  },
+  "keywords": ["pokemon", "pokedex", "electron", "desktop"],
+  "author": "DarkDex Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^26.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "build": {
+    "appId": "com.pokedexpro.app",
+    "productName": "DarkDex",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  }
+}
