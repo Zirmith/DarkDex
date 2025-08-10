@@ -245,7 +245,7 @@ class PokemonAPI {
     isMythical(species) {
         return species.is_mythical || false;
     }
-}
+
     async clearDataCache() {
         if (typeof window !== 'undefined' && window.electronAPI) {
             try {
@@ -271,8 +271,6 @@ class PokemonAPI {
             }
         }
     }
-// Initialize API
-window.pokemonAPI = new PokemonAPI();
 
     async getCacheStats() {
         if (typeof window !== 'undefined' && window.electronAPI) {
@@ -296,13 +294,7 @@ window.pokemonAPI = new PokemonAPI();
             performance: this.cacheStats
         };
     }
-// Setup electron API bridge
-if (typeof require !== 'undefined') {
-    const { ipcRenderer } = require('electron');
-    
-    window.electronAPI = {
-        invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args)
-    };
+
     formatBytes(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -311,3 +303,15 @@ if (typeof require !== 'undefined') {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 }
+
+// Setup electron API bridge
+if (typeof require !== 'undefined') {
+    const { ipcRenderer } = require('electron');
+    
+    window.electronAPI = {
+        invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args)
+    };
+}
+
+// Initialize API
+window.pokemonAPI = new PokemonAPI();

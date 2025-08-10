@@ -234,6 +234,7 @@ class DarkDexApp {
             });
         }
     }
+});
 
     showMainInterface() {
         const mainContainer = document.getElementById('main-container');
@@ -450,7 +451,7 @@ document.addEventListener('keydown', (e) => {
             window.darkdexApp.refreshData();
         }
     }
-});
+
     // Ctrl/Cmd + Shift + C to clear cache
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
         e.preventDefault();
