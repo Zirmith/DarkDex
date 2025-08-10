@@ -12,7 +12,7 @@
     <div id="splash-screen" class="splash-screen">
         <div class="splash-content">
             <div class="lugia-container">
-                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/249.gif" alt="Shadow Lugia" class="splash-lugia">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/249.gif" alt="Shadow Lugia" class="splash-lugia" id="splash-lugia">
                 <div class="shadow-aura"></div>
             </div>
             <h1 class="splash-title">DarkDex</h1>
@@ -150,6 +150,9 @@
                     <button id="clear-filters" class="btn-secondary">
                         <i class="ri-refresh-line"></i> Reset Filters
                     </button>
+                    <button id="cache-management" class="btn-secondary" style="margin-top: 8px;">
+                        <i class="ri-database-2-line"></i> Cache Management
+                    </button>
                 </div>
             </div>
 
@@ -277,6 +280,44 @@
         </div>
     </div>
 
+    <!-- Cache Management Modal -->
+    <div id="cache-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Cache Management</h2>
+                <button id="close-cache-modal" class="close-modal">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="cache-stats" id="cache-stats">
+                    <div class="loading-spinner">
+                        <i class="ri-loader-4-line"></i>
+                    </div>
+                    <p>Loading cache statistics...</p>
+                </div>
+                <div class="cache-actions" style="margin-top: 24px; display: none;" id="cache-actions">
+                    <div class="cache-action-group">
+                        <h4>Clear Cache</h4>
+                        <div class="cache-buttons">
+                            <button id="clear-data-cache" class="btn-secondary">
+                                <i class="ri-database-line"></i> Clear Data Cache
+                            </button>
+                            <button id="clear-sprite-cache" class="btn-secondary">
+                                <i class="ri-image-line"></i> Clear Sprite Cache
+                            </button>
+                            <button id="clear-audio-cache" class="btn-secondary">
+                                <i class="ri-volume-up-line"></i> Clear Audio Cache
+                            </button>
+                            <button id="clear-all-cache" class="btn-secondary" style="background: var(--error-color); color: white; border-color: var(--error-color);">
+                                <i class="ri-delete-bin-line"></i> Clear All Cache
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Scripts -->
     <script src="api.js"></script>
     <script src="sprites.js"></script>

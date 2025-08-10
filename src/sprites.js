@@ -6,7 +6,46 @@ class SpriteManager {
             shiny: false,
             showdown: false
         };
+        this.splashSpriteCache = new Map();
         this.setupControls();
+        this.cacheSplashSprite();
+    }
+
+    async cacheSplashSprite() {
+        // Cache the splash screen Lugia sprite
+        const splashSpriteUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/249.gif';
+        const filename = 'splash_lugia.gif';
+        
+        try {
+            if (typeof window !== 'undefined' && window.electronAPI) {
+                // Check if already cached
+                const cachedSprite = await window.electronAPI.invoke('get-sprite-path', filename);
+                if (cachedSprite.success) {
+                    this.splashSpriteCache.set('lugia', cachedSprite.path);
+                    console.log('Splash sprite loaded from cache');
+                    return cachedSprite.path;
+                }
+
+                // Download and cache if not found
+                const downloadResult = await window.electronAPI.invoke('download-sprite', splashSpriteUrl, filename);
+                if (downloadResult.success) {
+                    const localPath = `file://${downloadResult.path}`;
+                    this.splashSpriteCache.set('lugia', localPath);
+                    console.log('Splash sprite downloaded and cached');
+                    return localPath;
+                }
+            }
+        } catch (error) {
+            console.error('Error caching splash sprite:', error);
+        }
+        
+        // Fallback to direct URL
+        this.splashSpriteCache.set('lugia', splashSpriteUrl);
+        return splashSpriteUrl;
+    }
+
+    getSplashSprite() {
+        return this.splashSpriteCache.get('lugia') || 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/249.gif';
     }
 
     setupControls() {
@@ -97,23 +136,25 @@ class SpriteManager {
             const filename = this.generateFilename(pokemon, { ...this.config, ...options });
             
             // Check local cache first
-            const cachedSprite = await window.electronAPI.invoke('get-sprite-path', filename);
-            if (cachedSprite.success) {
-                this.spriteCache.set(cacheKey, cachedSprite.path);
-                return cachedSprite.path;
-            }
+            if (typeof window !== 'undefined' && window.electronAPI) {
+                const cachedSprite = await window.electronAPI.invoke('get-sprite-path', filename);
+                if (cachedSprite.success) {
+                    this.spriteCache.set(cacheKey, cachedSprite.path);
+                    return cachedSprite.path;
+                }
 
-            // Download and cache sprite
-            const downloadResult = await window.electronAPI.invoke('download-sprite', spriteUrl, filename);
-            if (downloadResult.success) {
-                const localPath = `file://${downloadResult.path}`;
-                this.spriteCache.set(cacheKey, localPath);
-                return localPath;
-            } else {
-                // Fallback to direct URL if caching fails
-                this.spriteCache.set(cacheKey, spriteUrl);
-                return spriteUrl;
+                // Download and cache sprite
+                const downloadResult = await window.electronAPI.invoke('download-sprite', spriteUrl, filename);
+                if (downloadResult.success) {
+                    const localPath = `file://${downloadResult.path}`;
+                    this.spriteCache.set(cacheKey, localPath);
+                    return localPath;
+                }
             }
+            
+            // Fallback to direct URL if caching fails or not in Electron
+            this.spriteCache.set(cacheKey, spriteUrl);
+            return spriteUrl;
         } catch (error) {
             console.error('Error loading sprite:', error);
             // Return direct URL as fallback
@@ -231,8 +272,38 @@ class SpriteManager {
         return alternatives;
     }
 
+    async clearSpriteCache() {
+        if (typeof window !== 'undefined' && window.electronAPI) {
+            try {
+                await window.electronAPI.invoke('clear-cache', 'sprites');
+                this.spriteCache.clear();
+                this.splashSpriteCache.clear();
+                console.log('Sprite cache cleared');
+                // Re-cache splash sprite
+                await this.cacheSplashSprite();
+            } catch (error) {
+                console.error('Error clearing sprite cache:', error);
+            }
+        }
+    }
+
+    async getCacheStats() {
+        if (typeof window !== 'undefined' && window.electronAPI) {
+            try {
+                const result = await window.electronAPI.invoke('get-cache-stats');
+                if (result.success) {
+                    return result.stats.sprites;
+                }
+            } catch (error) {
+                console.error('Error getting sprite cache stats:', error);
+            }
+        }
+        return { size: 0, files: 0 };
+    }
+
     clearCache() {
         this.spriteCache.clear();
+        this.splashSpriteCache.clear();
     }
 }
 

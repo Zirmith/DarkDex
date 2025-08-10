@@ -43,6 +43,13 @@ class DarkDexApp {
             // Step 3: Prepare sprites
             this.updateLoadingStep('step-sprites', 'loading');
             this.updateLoadingStatus('Materializing Shadow Forms...');
+            
+            // Cache splash sprite first
+            await window.spriteManager.cacheSplashSprite();
+            
+            // Update splash screen with cached sprite
+            this.updateSplashSprite();
+            
             await this.preloadInitialSprites();
             this.updateLoadingStep('step-sprites', 'complete');
             this.updateProgress(95);
@@ -107,6 +114,15 @@ class DarkDexApp {
         });
     }
 
+    updateSplashSprite() {
+        const splashLugia = document.querySelector('.splash-lugia');
+        if (splashLugia && window.spriteManager) {
+            const cachedSprite = window.spriteManager.getSplashSprite();
+            if (cachedSprite) {
+                splashLugia.src = cachedSprite;
+            }
+        }
+    }
     updateLoadingStep(stepId, status) {
         const step = document.getElementById(stepId);
         if (!step) return;
@@ -306,8 +322,11 @@ class DarkDexApp {
 
     async checkIfCached(key) {
         try {
-            const result = await window.electronAPI.invoke('get-cached-data', window.pokemonAPI.sanitizeKey(key));
-            return result.success;
+            if (typeof window !== 'undefined' && window.electronAPI) {
+                const result = await window.electronAPI.invoke('get-cached-data', window.pokemonAPI.sanitizeKey(key));
+                return result.success;
+            }
+            return false;
         } catch (error) {
             return false;
         }
@@ -352,15 +371,49 @@ class DarkDexApp {
         await this.loadPokemonDataWithProgress();
     }
 
-    clearCache() {
-        if (window.pokemonAPI) {
-            window.pokemonAPI.cache.clear();
-        }
-        if (window.spriteManager) {
-            window.spriteManager.clearCache();
+    async clearCache(type = 'all') {
+        try {
+            switch (type) {
+                case 'data':
+                    if (window.pokemonAPI) {
+                        await window.pokemonAPI.clearDataCache();
+                    }
+                    break;
+                case 'sprites':
+                    if (window.spriteManager) {
+                        await window.spriteManager.clearSpriteCache();
+                    }
+                    break;
+                case 'audio':
+                    if (window.audioManager) {
+                        await window.audioManager.clearAudioCache();
+                    }
+                    break;
+                case 'all':
+                default:
+                    if (window.pokemonAPI) {
+                        await window.pokemonAPI.clearAllCache();
+                    }
+                    if (window.spriteManager) {
+                        window.spriteManager.clearCache();
+                    }
+                    if (window.audioManager) {
+                        window.audioManager.clearAudioCache();
+                    }
+                    break;
+            }
+            console.log(`${type} cache cleared successfully`);
+        } catch (error) {
+            console.error(`Error clearing ${type} cache:`, error);
         }
     }
 
+    async getCacheStats() {
+        if (window.pokemonAPI) {
+            return await window.pokemonAPI.getCacheStats();
+        }
+        return null;
+    }
     getPokemonData() {
         return this.allPokemonData;
     }
@@ -398,7 +451,38 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+    // Ctrl/Cmd + Shift + C to clear cache
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        if (window.darkdexApp && window.darkdexApp.isInitialized) {
+            if (confirm('Clear all cached data? This will require re-downloading everything.')) {
+                window.darkdexApp.clearCache('all');
+            }
+        }
+    }
 
+    // Ctrl/Cmd + Shift + S to show cache stats
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        if (window.darkdexApp && window.darkdexApp.isInitialized) {
+            window.darkdexApp.getCacheStats().then(stats => {
+                if (stats) {
+                    const totalSize = window.pokemonAPI.formatBytes(stats.total.size);
+                    const message = `Cache Statistics:
+Data: ${stats.data.files} files (${window.pokemonAPI.formatBytes(stats.data.size)})
+Sprites: ${stats.sprites.files} files (${window.pokemonAPI.formatBytes(stats.sprites.size)})
+Audio: ${stats.audio.files} files (${window.pokemonAPI.formatBytes(stats.audio.size)})
+Total: ${stats.total.files} files (${totalSize})
+
+Performance:
+Cache Hits: ${stats.performance.hits}
+Cache Misses: ${stats.performance.misses}
+Errors: ${stats.performance.errors}`;
+                    alert(message);
+                }
+            });
+        }
+    }
 // Handle connection status changes
 window.addEventListener('online', () => {
     console.log('Connection restored');

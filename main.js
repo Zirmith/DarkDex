@@ -111,6 +111,23 @@ ipcMain.handle('download-sprite', async (event, url, filename) => {
   }
 });
 
+ipcMain.handle('download-audio', async (event, url, filename) => {
+  try {
+    const audioDir = path.join(app.getPath('userData'), 'audio');
+    if (!fs.existsSync(audioDir)) {
+      fs.mkdirSync(audioDir, { recursive: true });
+    }
+
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    const filePath = path.join(audioDir, filename);
+    fs.writeFileSync(filePath, response.data);
+    
+    return { success: true, path: filePath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('get-sprite-path', async (event, filename) => {
   try {
     const spritesDir = path.join(app.getPath('userData'), 'sprites');
@@ -121,6 +138,102 @@ ipcMain.handle('get-sprite-path', async (event, filename) => {
     } else {
       return { success: false };
     }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-audio-path', async (event, filename) => {
+  try {
+    const audioDir = path.join(app.getPath('userData'), 'audio');
+    const filePath = path.join(audioDir, filename);
+    
+    if (fs.existsSync(filePath)) {
+      return { success: true, path: `file://${filePath}` };
+    } else {
+      return { success: false };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('clear-cache', async (event, cacheType) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    let targetDir;
+    
+    switch (cacheType) {
+      case 'all':
+        // Clear all cache directories
+        const dirs = ['cache', 'sprites', 'audio'];
+        for (const dir of dirs) {
+          const dirPath = path.join(userDataPath, dir);
+          if (fs.existsSync(dirPath)) {
+            fs.rmSync(dirPath, { recursive: true, force: true });
+          }
+        }
+        break;
+      case 'data':
+        targetDir = path.join(userDataPath, 'cache');
+        break;
+      case 'sprites':
+        targetDir = path.join(userDataPath, 'sprites');
+        break;
+      case 'audio':
+        targetDir = path.join(userDataPath, 'audio');
+        break;
+      default:
+        return { success: false, error: 'Invalid cache type' };
+    }
+    
+    if (targetDir && fs.existsSync(targetDir)) {
+      fs.rmSync(targetDir, { recursive: true, force: true });
+    }
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-cache-stats', async (event) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const stats = {
+      data: { size: 0, files: 0 },
+      sprites: { size: 0, files: 0 },
+      audio: { size: 0, files: 0 },
+      total: { size: 0, files: 0 }
+    };
+    
+    const calculateDirStats = (dirPath) => {
+      if (!fs.existsSync(dirPath)) return { size: 0, files: 0 };
+      
+      let size = 0;
+      let files = 0;
+      
+      const items = fs.readdirSync(dirPath);
+      for (const item of items) {
+        const itemPath = path.join(dirPath, item);
+        const stat = fs.statSync(itemPath);
+        if (stat.isFile()) {
+          size += stat.size;
+          files++;
+        }
+      }
+      
+      return { size, files };
+    };
+    
+    stats.data = calculateDirStats(path.join(userDataPath, 'cache'));
+    stats.sprites = calculateDirStats(path.join(userDataPath, 'sprites'));
+    stats.audio = calculateDirStats(path.join(userDataPath, 'audio'));
+    
+    stats.total.size = stats.data.size + stats.sprites.size + stats.audio.size;
+    stats.total.files = stats.data.files + stats.sprites.files + stats.audio.files;
+    
+    return { success: true, stats };
   } catch (error) {
     return { success: false, error: error.message };
   }
