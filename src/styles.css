@@ -1611,6 +1611,207 @@ body {
   color: var(--text-muted);
 }
 
+/* Cache Management Modal */
+.cache-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cache-stat-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.cache-stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.cache-stat-header i {
+  font-size: 24px;
+  color: var(--primary-color);
+}
+
+.cache-stat-header h3 {
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.cache-stat-value {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cache-stat-value .size {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.cache-stat-value .files {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.cache-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cache-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.cache-item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cache-item-info i {
+  font-size: 18px;
+  color: var(--text-muted);
+}
+
+.cache-item-info span {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.cache-item-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.cache-item-stats .size {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cache-item-stats .files {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cache-performance {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.cache-performance h4 {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.performance-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.perf-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+
+.perf-stat .label {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.perf-stat .value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.perf-stat .value.success {
+  color: var(--success-color);
+}
+
+.perf-stat .value.warning {
+  color: var(--warning-color);
+}
+
+.perf-stat .value.error {
+  color: var(--error-color);
+}
+
+.cache-action-group {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.cache-action-group h4 {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.cache-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cache-buttons .btn-secondary {
+  width: auto;
+  height: 40px;
+  font-size: 13px;
+}
+
+.cache-error {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+}
+
+.cache-error i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: var(--error-color);
+}
+
+.cache-error p {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.cache-error small {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;
@@ -1639,6 +1840,14 @@ body {
   
   .pokemon-card {
     min-height: 300px;
+  }
+  
+  .cache-buttons {
+    grid-template-columns: 1fr;
+  }
+  
+  .performance-stats {
+    grid-template-columns: 1fr;
   }
 }
 

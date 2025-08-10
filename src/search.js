@@ -69,6 +69,180 @@ class SearchManager {
                 this.clearAllFilters();
             });
         }
+
+        // Cache management
+        const cacheManagementBtn = document.getElementById('cache-management');
+        if (cacheManagementBtn) {
+            cacheManagementBtn.addEventListener('click', () => {
+                this.openCacheManagement();
+            });
+        }
+    }
+
+    async openCacheManagement() {
+        const modal = document.getElementById('cache-modal');
+        const statsContainer = document.getElementById('cache-stats');
+        const actionsContainer = document.getElementById('cache-actions');
+        
+        modal.style.display = 'block';
+        
+        // Show loading state
+        statsContainer.innerHTML = `
+            <div class="loading-spinner">
+                <i class="ri-loader-4-line"></i>
+            </div>
+            <p>Loading cache statistics...</p>
+        `;
+        actionsContainer.style.display = 'none';
+        
+        try {
+            const stats = await window.pokemonAPI.getCacheStats();
+            
+            // Display cache statistics
+            statsContainer.innerHTML = `
+                <div class="cache-overview">
+                    <div class="cache-stat-card">
+                        <div class="cache-stat-header">
+                            <i class="ri-database-2-line"></i>
+                            <h3>Total Cache</h3>
+                        </div>
+                        <div class="cache-stat-value">
+                            <span class="size">${window.pokemonAPI.formatBytes(stats.total.size)}</span>
+                            <span class="files">${stats.total.files} files</span>
+                        </div>
+                    </div>
+                    
+                    <div class="cache-breakdown">
+                        <div class="cache-item">
+                            <div class="cache-item-info">
+                                <i class="ri-database-line"></i>
+                                <span>Pokemon Data</span>
+                            </div>
+                            <div class="cache-item-stats">
+                                <span class="size">${window.pokemonAPI.formatBytes(stats.data.size)}</span>
+                                <span class="files">${stats.data.files} files</span>
+                            </div>
+                        </div>
+                        
+                        <div class="cache-item">
+                            <div class="cache-item-info">
+                                <i class="ri-image-line"></i>
+                                <span>Sprites</span>
+                            </div>
+                            <div class="cache-item-stats">
+                                <span class="size">${window.pokemonAPI.formatBytes(stats.sprites.size)}</span>
+                                <span class="files">${stats.sprites.files} files</span>
+                            </div>
+                        </div>
+                        
+                        <div class="cache-item">
+                            <div class="cache-item-info">
+                                <i class="ri-volume-up-line"></i>
+                                <span>Audio</span>
+                            </div>
+                            <div class="cache-item-stats">
+                                <span class="size">${window.pokemonAPI.formatBytes(stats.audio.size)}</span>
+                                <span class="files">${stats.audio.files} files</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="cache-performance">
+                        <h4>Performance Statistics</h4>
+                        <div class="performance-stats">
+                            <div class="perf-stat">
+                                <span class="label">Cache Hits:</span>
+                                <span class="value success">${stats.performance.hits}</span>
+                            </div>
+                            <div class="perf-stat">
+                                <span class="label">Cache Misses:</span>
+                                <span class="value warning">${stats.performance.misses}</span>
+                            </div>
+                            <div class="perf-stat">
+                                <span class="label">Errors:</span>
+                                <span class="value error">${stats.performance.errors}</span>
+                            </div>
+                            <div class="perf-stat">
+                                <span class="label">Hit Rate:</span>
+                                <span class="value">${stats.performance.hits + stats.performance.misses > 0 ? 
+                                    Math.round((stats.performance.hits / (stats.performance.hits + stats.performance.misses)) * 100) : 0}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Show actions
+            actionsContainer.style.display = 'block';
+            
+            // Setup cache action buttons
+            this.setupCacheActions();
+            
+        } catch (error) {
+            console.error('Error loading cache stats:', error);
+            statsContainer.innerHTML = `
+                <div class="cache-error">
+                    <i class="ri-error-warning-line"></i>
+                    <p>Failed to load cache statistics</p>
+                    <small>${error.message}</small>
+                </div>
+            `;
+        }
+        
+        // Setup modal close
+        const closeBtn = document.getElementById('close-cache-modal');
+        closeBtn.onclick = () => {
+            modal.style.display = 'none';
+        };
+        
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+    }
+
+    setupCacheActions() {
+        const clearDataBtn = document.getElementById('clear-data-cache');
+        const clearSpriteBtn = document.getElementById('clear-sprite-cache');
+        const clearAudioBtn = document.getElementById('clear-audio-cache');
+        const clearAllBtn = document.getElementById('clear-all-cache');
+        
+        if (clearDataBtn) {
+            clearDataBtn.onclick = async () => {
+                if (confirm('Clear Pokemon data cache? This will require re-downloading Pokemon information.')) {
+                    await window.darkdexApp.clearCache('data');
+                    this.openCacheManagement(); // Refresh stats
+                }
+            };
+        }
+        
+        if (clearSpriteBtn) {
+            clearSpriteBtn.onclick = async () => {
+                if (confirm('Clear sprite cache? This will require re-downloading Pokemon sprites.')) {
+                    await window.darkdexApp.clearCache('sprites');
+                    this.openCacheManagement(); // Refresh stats
+                }
+            };
+        }
+        
+        if (clearAudioBtn) {
+            clearAudioBtn.onclick = async () => {
+                if (confirm('Clear audio cache? This will require re-downloading audio files.')) {
+                    await window.darkdexApp.clearCache('audio');
+                    this.openCacheManagement(); // Refresh stats
+                }
+            };
+        }
+        
+        if (clearAllBtn) {
+            clearAllBtn.onclick = async () => {
+                if (confirm('Clear ALL cache? This will require re-downloading everything and may take some time.')) {
+                    await window.darkdexApp.clearCache('all');
+                    this.openCacheManagement(); // Refresh stats
+                }
+            };
+        }
     }
 
     setPokemonData(pokemonList) {
