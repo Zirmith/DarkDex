@@ -234,7 +234,6 @@ class DarkDexApp {
             });
         }
     }
-});
 
     showMainInterface() {
         const mainContainer = document.getElementById('main-container');
@@ -484,6 +483,8 @@ Errors: ${stats.performance.errors}`;
             });
         }
     }
+});
+
 // Handle connection status changes
 window.addEventListener('online', () => {
     console.log('Connection restored');
