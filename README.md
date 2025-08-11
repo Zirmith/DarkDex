@@ -45,7 +45,7 @@ A dark-themed, offline-capable desktop Pokédex application inspired by Shadow L
 ### Quick Start
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/darkdex.git
+git clone https://github.com/Zirmith/darkdex.git
 
 # Navigate to directory
 cd darkdex
