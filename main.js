@@ -53,6 +53,84 @@ function createWindow() {
   });
 }
 
+
+// =====================
+// GitHub SRC Folder Updater
+// =====================
+
+// Helper: SHA256 hash
+const hashContent = (content) => crypto.createHash('sha256').update(content).digest('hex');
+
+// Get file list from GitHub API recursively
+const getGitHubFileList = async (repoOwner, repoName, folderPath) => {
+  const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${folderPath}`;
+  const res = await axios.get(apiUrl, { headers: { 'User-Agent': 'Electron-Updater' } });
+  
+  let files = [];
+  for (const item of res.data) {
+    if (item.type === 'file') {
+      files.push(item.path);
+    } else if (item.type === 'dir') {
+      const subFiles = await getGitHubFileList(repoOwner, repoName, item.path);
+      files = files.concat(subFiles);
+    }
+  }
+  return files;
+};
+
+// Download file raw content
+const downloadRawFile = async (repoOwner, repoName, branch, filePath) => {
+  const rawUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branch}/${filePath}`;
+  const res = await axios.get(rawUrl, { responseType: 'text' });
+  return res.data;
+};
+
+// Update all files in /src
+const updateSrcFromGitHub = async () => {
+  const repoOwner = 'Zirmith';
+  const repoName = 'DarkDex';
+  const branch = 'main';
+  const folderPath = 'src';
+  const localBase = path.join(__dirname, 'src');
+
+  console.log('[Updater] Checking GitHub for /src updates...');
+  const files = await getGitHubFileList(repoOwner, repoName, folderPath);
+  let updated = [];
+
+  for (const file of files) {
+    try {
+      const remoteContent = await downloadRawFile(repoOwner, repoName, branch, file);
+      const remoteHash = hashContent(remoteContent);
+
+      const localPath = path.join(__dirname, file);
+      let localHash = null;
+
+      if (fs.existsSync(localPath)) {
+        const localContent = fs.readFileSync(localPath, 'utf8');
+        localHash = hashContent(localContent);
+      }
+
+      if (remoteHash !== localHash) {
+        fs.mkdirSync(path.dirname(localPath), { recursive: true });
+        fs.writeFileSync(localPath, remoteContent, 'utf8');
+        updated.push(file);
+      }
+    } catch (err) {
+      console.error(`[Updater] Failed to update ${file}:`, err.message);
+    }
+  }
+
+  if (updated.length > 0) {
+    console.log(`[Updater] Updated files:\n- ${updated.join('\n- ')}`);
+    dialog.showMessageBox({ 
+      type: 'info', 
+      message: `Updated ${updated.length} file(s) from GitHub. Restart app for changes.`
+    });
+  } else {
+    console.log('[Updater] All src files are up to date.');
+  }
+};
+
 // API and caching handlers
 ipcMain.handle('fetch-pokemon-data', async (event, url) => {
   try {
@@ -264,8 +342,13 @@ ipcMain.handle('test-connection', async () => {
   }
 });
 
-app.whenReady().then(createWindow);
-
+// =====================
+// App lifecycle
+// =====================
+app.whenReady().then(async () => {
+  await updateSrcFromGitHub(); // <-- Run updater before window loads
+  createWindow();
+});
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
