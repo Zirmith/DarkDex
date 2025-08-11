@@ -204,32 +204,49 @@
                     </div>
                     
                     <div class="modal-body">
-                        <div class="pokemon-detail-container">
-                            <!-- Left Panel - Pokemon Info -->
-                            <div class="pokemon-left-panel">
-                                <div class="pokemon-navigation">
-                                    <button class="nav-button" id="prev-pokemon" title="Previous Pokemon">
-                                        <i class="ri-arrow-left-line"></i>
-                                    </button>
-                                    <button class="nav-button" id="next-pokemon" title="Next Pokemon">
-                                        <i class="ri-arrow-right-line"></i>
-                                    </button>
+                        <div class="pokemon-detail-tabs">
+                            <button class="tab-btn active" data-tab="overview">Overview</button>
+                            <button class="tab-btn" data-tab="stats">Stats</button>
+                            <button class="tab-btn" data-tab="moves">Moves</button>
+                            <button class="tab-btn" data-tab="evolution">Evolution</button>
+                            <button class="tab-btn" data-tab="forms">Forms</button>
+                            <button class="tab-btn" data-tab="locations">Locations</button>
+                        </div>
+
+                        <div class="tab-content" id="tab-overview">
+                            <div class="pokemon-overview">
+                                <div class="pokemon-image-section">
+                                    <div class="sprite-container">
+                                        <img id="modal-pokemon-sprite" src="" alt="Pokemon Sprite">
+                                    </div>
+                                    <div class="sprite-controls-modal">
+                                        <button id="toggle-sprite-type" class="btn-secondary">Regular</button>
+                                        <button id="toggle-sprite-style" class="btn-secondary">Static</button>
+                                    </div>
                                 </div>
-                                
-                                <div class="pokemon-info-section">
-                                    <!-- Pokemon info will be populated here -->
-                                </div>
-                            </div>
-                            
-                            <!-- Right Panel - Pokemon Sprite and Stats -->
-                            <div class="pokemon-right-panel">
-                                <div class="pokemon-sprite-container">
-                                    <img id="modal-pokemon-sprite" src="" alt="Pokemon Sprite">
+                                <div class="pokemon-info">
+                                    <div class="basic-info">
+                                        <p><strong>National Dex:</strong> <span id="modal-pokemon-id"></span></p>
+                                        <p><strong>Height:</strong> <span id="modal-pokemon-height"></span></p>
+                                        <p><strong>Weight:</strong> <span id="modal-pokemon-weight"></span></p>
+                                        <p><strong>Base Experience:</strong> <span id="modal-pokemon-experience"></span></p>
+                                    </div>
+                                    <div class="types-section">
+                                        <strong>Types:</strong>
+                                        <div id="modal-pokemon-types" class="types-container"></div>
+                                    </div>
+                                    <div class="abilities-section">
+                                        <strong>Abilities:</strong>
+                                        <div id="modal-pokemon-abilities"></div>
+                                    </div>
+                                    <div class="description-section">
+                                        <strong>Description:</strong>
+                                        <p id="modal-pokemon-description">Loading description...</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Stats Tab Content (Hidden by default, shown when stats button clicked) -->
+
                         <div class="tab-content" id="tab-stats" style="display: none;">
                             <div class="stats-container" id="modal-pokemon-stats"></div>
                         </div>
