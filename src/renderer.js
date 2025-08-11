@@ -138,9 +138,6 @@ class DarkDexApp {
         if (statusText) {
             statusText.textContent = text;
         }
-        
-        // Also log to console for debugging
-        console.log('Loading Status:', text);
     }
 
     updateProgress(percentage) {
@@ -408,6 +405,76 @@ class DarkDexApp {
         }
         return null;
     }
+
+    async showRetryModal() {
+        const failedPokemon = window.pokemonAPI.getFailedPokemon();
+        if (failedPokemon.length === 0) {
+            alert('No failed Pokémon to retry!');
+            return;
+        }
+
+        const retryModal = document.createElement('div');
+        retryModal.className = 'modal';
+        retryModal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2>Retry Failed Downloads</h2>
+                    <button class="close-modal" onclick="this.closest('.modal').remove()">
+                        <i class="ri-close-line"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Found ${failedPokemon.length} failed Pokémon downloads. Would you like to retry them?</p>
+                    <div class="failed-pokemon-list" style="max-height: 200px; overflow-y: auto; margin: 16px 0;">
+                        ${failedPokemon.map(p => `
+                            <div style="padding: 8px; background: var(--bg-tertiary); margin: 4px 0; border-radius: 6px;">
+                                ${p.name || p.id}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button class="btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+                        <button class="btn-secondary" onclick="window.darkdexApp.retryFailedPokemon()" style="background: var(--primary-color); color: white;">
+                            Retry All
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(retryModal);
+        retryModal.style.display = 'flex';
+    }
+
+    async retryFailedPokemon() {
+        // Close the retry modal
+        const retryModal = document.querySelector('.modal');
+        if (retryModal) retryModal.remove();
+
+        this.updateLoadingStatus('Retrying failed Pokémon downloads...');
+        
+        try {
+            const retryResults = await window.pokemonAPI.retryFailedPokemon();
+            
+            if (retryResults.length > 0) {
+                // Add successful retries to the main data
+                this.allPokemonData.push(...retryResults);
+                this.allPokemonData.sort((a, b) => a.id - b.id);
+                
+                if (window.searchManager) {
+                    window.searchManager.setPokemonData(this.allPokemonData);
+                }
+                
+                alert(`Successfully downloaded ${retryResults.length} Pokémon!`);
+            } else {
+                alert('No additional Pokémon could be downloaded at this time.');
+            }
+        } catch (error) {
+            console.error('Error retrying failed Pokemon:', error);
+            alert('Error occurred while retrying downloads.');
+        }
+    }
+
     getPokemonData() {
         return this.allPokemonData;
     }
