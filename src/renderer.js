@@ -274,79 +274,26 @@ class DarkDexApp {
             this.updateLoadingStatus('No cache found, fetching from Shadow Realm...');
             
             try {
-                // Get the Pokemon list first
-                this.updateLoadingStatus('Fetching Pokémon registry...');
-                const pokemonList = await window.pokemonAPI.getPokemonList(this.totalPokemon, 0);
-                
-                if (!pokemonList) {
-                    throw new Error('Could not fetch Pokemon list - check internet connection');
-                }
-                
+                // Use the getAllPokemon method which handles batching and error recovery
+                this.updateLoadingStatus('Fetching Pokémon data...');
                 this.updateProgress(10);
                 
-                const detailedPokemon = [];
-
-                // Process in batches with detailed progress updates
-                const batchSize = 15;
-                let processed = 0;
-
-                for (let i = 0; i < pokemonList.results.length; i += batchSize) {
-                    const batch = pokemonList.results.slice(i, i + batchSize);
-                    
-                    const batchPromises = batch.map(async (pokemon, index) => {
-                        try {
-                            const currentIndex = i + index + 1;
-                            const pokemonName = pokemon.name;
-                            
-                            // Check if data is cached
-                            const isFromCache = window.pokemonAPI.cache.has(`pokemon_${pokemonName}`) || 
-                                              await this.checkIfCached(`pokemon_${pokemonName}`);
-                            
-                            const cacheStatus = isFromCache ? '[CACHED]' : '[DOWNLOADING]';
-                            this.updateLoadingStatus(
-                                `Loading ${pokemonName.charAt(0).toUpperCase() + pokemonName.slice(1)} (#${currentIndex}/${this.totalPokemon}) ${cacheStatus}`
-                            );
-
-                            // Load complete Pokemon data
-                            const completeData = await window.pokemonAPI.getCompletePokemonData(pokemonName);
-                            
-                            processed++;
-                            const progress = 10 + (processed / this.totalPokemon) * 65; // 10% to 75%
-                            this.updateProgress(progress);
-                            
-                            return completeData;
-                        } catch (error) {
-                            console.error(`Error fetching ${pokemon.name}:`, error);
-                            processed++;
-                            const progress = 10 + (processed / this.totalPokemon) * 65;
-                            this.updateProgress(progress);
-                            return null;
-                        }
-                    });
-
-                    const batchResults = await Promise.all(batchPromises);
-                    detailedPokemon.push(...batchResults.filter(p => p !== null));
-
-                    // Small delay between batches to show progress and prevent overwhelming
-                    if (i + batchSize < pokemonList.results.length) {
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
+                const allPokemon = await window.pokemonAPI.getAllPokemon(this.totalPokemon);
+                
+                if (allPokemon && allPokemon.length > 0) {
+                    this.allPokemonData = allPokemon;
+                    window.searchManager.setPokemonData(allPokemon);
+                    this.updateLoadingStatus(`Loaded ${allPokemon.length} Pokémon successfully!`);
+                } else {
+                    throw new Error('No Pokemon data received');
                 }
-
-                // Store all Pokemon data
-                this.allPokemonData = detailedPokemon;
-                
-                // Initialize search manager with all Pokemon
-                window.searchManager.setPokemonData(detailedPokemon);
-                
-                this.updateLoadingStatus(`Loaded ${detailedPokemon.length} Pokémon successfully!`);
                 
             } catch (error) {
                 console.error('Error loading Pokemon data from API:', error);
                 
                 // Try to load any partial cached data as fallback
                 this.updateLoadingStatus('API failed, checking for partial cache...');
-                const partialCache = await this.loadPartialCachedData();
+                const partialCache = await window.pokemonAPI.loadPartialCachedData();
                 
                 if (partialCache && partialCache.length > 0) {
                     this.allPokemonData = partialCache;
@@ -363,40 +310,6 @@ class DarkDexApp {
         }
     }
 
-    async loadPartialCachedData() {
-        try {
-            const cachedPokemon = [];
-            
-            // Try to load individual cached Pokemon - more comprehensive search
-            for (let i = 1; i <= 2000; i++) {
-                try {
-                    const cached = await window.pokemonAPI.fetchData(null, `complete_pokemon_${i}`);
-                    if (cached) {
-                        cachedPokemon.push(cached);
-                    }
-                } catch (error) {
-                    // Skip missing cache entries
-                    continue;
-                }
-                
-                // Update loading status periodically
-                if (i % 100 === 0) {
-                    this.updateLoadingStatus(`Checking cache... found ${cachedPokemon.length} Pokemon so far`);
-                }
-                
-                // Break if we haven't found any Pokemon in the last 200 IDs
-                if (i > 300 && cachedPokemon.length === 0) {
-                    break;
-                }
-            }
-            
-            console.log(`Loaded ${cachedPokemon.length} Pokemon from partial cache`);
-            return cachedPokemon;
-        } catch (error) {
-            console.error('Error loading partial cached data:', error);
-            return [];
-        }
-    }
 
     async checkIfCached(key) {
         try {

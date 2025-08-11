@@ -303,10 +303,15 @@ class SearchManager {
         }
 
         // Update basic info
-        document.getElementById('modal-pokemon-id').textContent = `#${pokemon.id.toString().padStart(3, '0')}`;
-        document.getElementById('modal-pokemon-height').textContent = `${(pokemon.height / 10).toFixed(1)} m`;
-        document.getElementById('modal-pokemon-weight').textContent = `${(pokemon.weight / 10).toFixed(1)} kg`;
-        document.getElementById('modal-pokemon-experience').textContent = pokemon.base_experience || 'Unknown';
+        const idElement = document.getElementById('modal-pokemon-id');
+        const heightElement = document.getElementById('modal-pokemon-height');
+        const weightElement = document.getElementById('modal-pokemon-weight');
+        const experienceElement = document.getElementById('modal-pokemon-experience');
+        
+        if (idElement) idElement.textContent = `#${pokemon.id.toString().padStart(3, '0')}`;
+        if (heightElement) heightElement.textContent = `${(pokemon.height / 10).toFixed(1)} m`;
+        if (weightElement) weightElement.textContent = `${(pokemon.weight / 10).toFixed(1)} kg`;
+        if (experienceElement) experienceElement.textContent = pokemon.base_experience || 'Unknown';
 
         // Update types
         const typesContainer = document.getElementById('modal-pokemon-types');
@@ -334,8 +339,12 @@ class SearchManager {
             if (pokemon.description) {
                 descriptionElement.textContent = pokemon.description;
             } else if (pokemon.species) {
-                const description = window.pokemonAPI.getPokemonDescription(pokemon.species);
-                descriptionElement.textContent = description;
+                window.pokemonAPI.getPokemonDescription(pokemon.species).then(description => {
+                    descriptionElement.textContent = description;
+                }).catch(error => {
+                    console.error('Error getting description:', error);
+                    descriptionElement.textContent = 'Description unavailable.';
+                });
             } else {
                 descriptionElement.textContent = 'Loading description...';
             }

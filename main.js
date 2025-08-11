@@ -243,7 +243,21 @@ ipcMain.handle('get-cache-stats', async (event) => {
 
 ipcMain.handle('check-internet', async () => {
   try {
-    await axios.get('https://pokeapi.co/api/v2/pokemon/1', { timeout: 5000 });
+    const response = await axios.get('https://pokeapi.co/api/v2/pokemon/1', { timeout: 5000 });
+    if (response.status === 200) {
+      return { online: true };
+    } else {
+      return { online: false };
+    }
+  } catch (error) {
+    console.log('Internet check failed:', error.message);
+    return { online: false };
+  }
+});
+
+ipcMain.handle('test-connection', async () => {
+  try {
+    const response = await axios.get('https://httpbin.org/status/200', { timeout: 3000 });
     return { online: true };
   } catch (error) {
     return { online: false };

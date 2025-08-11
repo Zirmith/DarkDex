@@ -174,7 +174,6 @@ class PokemonAPI {
     }
 
     async getAllPokemon(maxPokemon = 1010) {
-        // Remove the limit - get all available Pokemon
         try {
             // Try to get cached complete Pokemon data first
             const cachedAllPokemon = await this.getCachedAllPokemon();
@@ -183,8 +182,8 @@ class PokemonAPI {
                 return cachedAllPokemon;
             }
 
-            // Get all Pokemon without limit
-            const pokemonList = await this.getPokemonList(100000, 0);
+            // Get Pokemon list with reasonable limit
+            const pokemonList = await this.getPokemonList(maxPokemon, 0);
             if (!pokemonList) {
                 throw new Error('Could not fetch Pokemon list');
             }
@@ -192,10 +191,12 @@ class PokemonAPI {
             console.log(`Found ${pokemonList.results.length} total Pokemon available`);
             const detailedPokemon = [];
 
-            // Process in batches to avoid overwhelming the API
-            const batchSize = 50; // Increase batch size for better performance
-            for (let i = 0; i < pokemonList.results.length; i += batchSize) {
-                const batch = pokemonList.results.slice(i, i + batchSize);
+            // Process in smaller batches to avoid overwhelming the API
+            const batchSize = 10;
+            const maxToProcess = Math.min(pokemonList.results.length, maxPokemon);
+            
+            for (let i = 0; i < maxToProcess; i += batchSize) {
+                const batch = pokemonList.results.slice(i, Math.min(i + batchSize, maxToProcess));
                 const batchPromises = batch.map(async (pokemon) => {
                     try {
                         // Cache individual Pokemon data
@@ -203,23 +204,31 @@ class PokemonAPI {
                         if (!details) return null;
                         
                         const species = await this.getPokemonSpecies(pokemon.name);
-                        if (!species) return { ...details, species: null };
                         
                         // Get additional data
-                        const encounters = await this.getPokemonEncounters(details.id).catch(() => []);
+                        let encounters = [];
+                        try {
+                            encounters = await this.getPokemonEncounters(details.id);
+                        } catch (error) {
+                            console.warn(`Could not fetch encounters for ${pokemon.name}:`, error);
+                        }
                         
                         // Get evolution chain if available
                         let evolutionChain = null;
-                        if (species.evolution_chain?.url) {
+                        if (species && species.evolution_chain?.url) {
                             const evolutionId = species.evolution_chain.url.split('/').slice(-2, -1)[0];
-                            evolutionChain = await this.getEvolutionChain(evolutionId).catch(() => null);
+                            try {
+                                evolutionChain = await this.getEvolutionChain(evolutionId);
+                            } catch (error) {
+                                console.warn(`Could not fetch evolution chain for ${pokemon.name}:`, error);
+                            }
                         }
                         
                         const completeData = { 
                             ...details, 
-                            species, 
+                            species: species || null,
                             encounters: encounters || [],
-                            evolutionChain
+                            evolutionChain: evolutionChain || null
                         };
                         
                         // Cache individual complete Pokemon data
@@ -237,11 +246,11 @@ class PokemonAPI {
                 detailedPokemon.push(...batchResults.filter(p => p !== null));
 
                 // Log progress
-                console.log(`Loaded ${detailedPokemon.length}/${pokemonList.results.length} Pokemon...`);
+                console.log(`Loaded ${detailedPokemon.length}/${maxToProcess} Pokemon...`);
 
                 // Small delay between batches to be respectful to the API
-                if (i + batchSize < pokemonList.results.length) {
-                    await new Promise(resolve => setTimeout(resolve, 50)); // Reduce delay slightly
+                if (i + batchSize < maxToProcess) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 }
             }
 
@@ -252,7 +261,17 @@ class PokemonAPI {
             return detailedPokemon;
         } catch (error) {
             console.error('Error fetching all Pokemon:', error);
-            throw error;
+            
+            // Try to load any partial cached data as fallback
+            console.log('Attempting to load partial cached data...');
+            const partialCache = await this.loadPartialCachedData();
+            
+            if (partialCache && partialCache.length > 0) {
+                console.log(`Loaded ${partialCache.length} Pokemon from partial cache`);
+                return partialCache;
+            } else {
+                throw new Error('No internet connection and no cached data available');
+            }
         }
     }
 
@@ -285,11 +304,58 @@ class PokemonAPI {
         try {
             const cachedPokemon = [];
             
-            // Try to load individual cached Pokemon - check more extensively
-            for (let i = 1; i <= 2000; i++) { // Check up to 2000 to catch any future Pokemon
+            // Try to load individual cached Pokemon
+            for (let i = 1; i <= 1010; i++) {
                 try {
-                    const cached = await window.pokemonAPI.fetchData(null, `complete_pokemon_${i}`);
-                    if (cached) {
+                    if (typeof window !== 'undefined' && window.electronAPI) {
+                        const cachedResult = await window.electronAPI.invoke('get-cached-data', this.sanitizeKey(`complete_pokemon_${i}`));
+                        if (cachedResult.success) {
+                            cachedPokemon.push(cachedResult.data);
+                        }
+                    }
+                } catch (error) {
+                    // Skip missing cache entries
+                    continue;
+                }
+                
+                // Update loading status periodically
+                if (i % 100 === 0) {
+                    console.log(`Checking cache... found ${cachedPokemon.length} Pokemon so far`);
+                }
+            }
+            
+            // Also try to load by name for common Pokemon
+            const commonPokemon = ['pikachu', 'charizard', 'blastoise', 'venusaur', 'mewtwo', 'mew'];
+            for (const name of commonPokemon) {
+                try {
+                    if (typeof window !== 'undefined' && window.electronAPI) {
+                        const cachedResult = await window.electronAPI.invoke('get-cached-data', this.sanitizeKey(`complete_pokemon_${name}`));
+                        if (cachedResult.success && !cachedPokemon.find(p => p.name === name)) {
+                            cachedPokemon.push(cachedResult.data);
+                        }
+                    }
+                } catch (error) {
+                    continue;
+                }
+            }
+            
+            console.log(`Loaded ${cachedPokemon.length} Pokemon from partial cache`);
+            return cachedPokemon.sort((a, b) => a.id - b.id);
+        } catch (error) {
+            console.error('Error loading partial cached data:', error);
+            return [];
+        }
+    }
+
+    async loadPartialCachedDataOld() {
+        try {
+            const cachedPokemon = [];
+            
+            // Try to load individual cached Pokemon - more comprehensive search
+            for (let i = 1; i <= 1010; i++) {
+                try {
+                    const cached = await this.fetchData(null, `complete_pokemon_${i}`);
+                    if (cached && cached.id) {
                         cachedPokemon.push(cached);
                     }
                 } catch (error) {
@@ -297,8 +363,8 @@ class PokemonAPI {
                     continue;
                 }
                 
-                // Break if we haven't found any Pokemon in the last 100 IDs
-                if (i > 200 && cachedPokemon.length === 0) {
+                // Break if we haven't found any Pokemon in the last 200 IDs
+                if (i > 300 && cachedPokemon.length === 0) {
                     break;
                 }
             }
