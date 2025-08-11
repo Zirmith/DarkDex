@@ -278,6 +278,7 @@ class DarkDexApp {
                 this.updateLoadingStatus('Fetching Pokémon data...');
                 this.updateProgress(10);
                 
+                // Download ALL Pokemon, not just a subset
                 const allPokemon = await window.pokemonAPI.getAllPokemon(this.totalPokemon);
                 
                 if (allPokemon && allPokemon.length > 0) {
@@ -326,7 +327,8 @@ class DarkDexApp {
     async preloadInitialSprites() {
         if (!window.spriteManager || !window.searchManager.filteredPokemon) return;
         
-        const pokemonToPreload = window.searchManager.filteredPokemon.slice(0, 100);
+        // Preload sprites for first 200 Pokemon for better initial experience
+        const pokemonToPreload = window.searchManager.filteredPokemon.slice(0, 200);
         let preloaded = 0;
         
         for (const pokemon of pokemonToPreload) {
@@ -407,6 +409,13 @@ class DarkDexApp {
     }
     getPokemonData() {
         return this.allPokemonData;
+    }
+    
+    // Method to update Pokemon download status from API
+    updatePokemonDownloadStatus(pokemonName, current, total) {
+        const percentage = Math.floor((current / total) * 65) + 10; // 10% to 75% range
+        this.updateProgress(percentage);
+        this.updateLoadingStatus(`Downloading ${pokemonName}... (${current}/${total})`);
     }
 }
 

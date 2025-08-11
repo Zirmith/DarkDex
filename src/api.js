@@ -193,21 +193,30 @@ class PokemonAPI {
             const detailedPokemon = [];
             const failedPokemon = [];
 
-            // Process in smaller batches to avoid overwhelming the API
-            const batchSize = 3; // Reduced batch size to be more gentle on API
+            // Process in smaller batches with progress reporting
+            const batchSize = 5; // Slightly larger batch for efficiency
             const maxToProcess = Math.min(pokemonList.results.length, maxPokemon);
             
             for (let i = 0; i < maxToProcess; i += batchSize) {
                 const batch = pokemonList.results.slice(i, Math.min(i + batchSize, maxToProcess));
                 const batchPromises = batch.map(async (pokemon) => {
                     try {
+                        // Report which Pokemon is being downloaded
+                        const pokemonName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+                        console.log(`Downloading ${pokemonName}... (${detailedPokemon.length + 1}/${maxToProcess})`);
+                        
+                        // Notify the renderer about current download
+                        if (window.darkdexApp && window.darkdexApp.updatePokemonDownloadStatus) {
+                            window.darkdexApp.updatePokemonDownloadStatus(pokemonName, detailedPokemon.length + 1, maxToProcess);
+                        }
+                        
                         // Cache individual Pokemon data
                         const details = await this.getPokemon(pokemon.name);
                         if (!details) return null;
                         
                         const species = await this.getPokemonSpecies(pokemon.name);
                         
-                        // Get additional data
+                        // Get complete additional data
                         let encounters = [];
                         try {
                             encounters = await this.getPokemonEncounters(details.id);
@@ -246,12 +255,84 @@ class PokemonAPI {
                             console.warn(`Could not fetch forms for ${pokemon.name}:`, error);
                         }
                         
+                        // Get detailed abilities information
+                        let detailedAbilities = [];
+                        try {
+                            if (details.abilities && details.abilities.length > 0) {
+                                const abilityPromises = details.abilities.map(async (abilityData) => {
+                                    try {
+                                        const abilityDetails = await this.getAbility(abilityData.ability.name);
+                                        return {
+                                            ...abilityData,
+                                            details: abilityDetails
+                                        };
+                                    } catch (error) {
+                                        console.warn(`Could not fetch ability ${abilityData.ability.name}:`, error);
+                                        return abilityData;
+                                    }
+                                });
+                                detailedAbilities = await Promise.all(abilityPromises);
+                            }
+                        } catch (error) {
+                            console.warn(`Could not fetch detailed abilities for ${pokemon.name}:`, error);
+                            detailedAbilities = details.abilities || [];
+                        }
+                        
+                        // Get detailed moves information (sample of important moves to avoid overwhelming)
+                        let detailedMoves = [];
+                        try {
+                            if (details.moves && details.moves.length > 0) {
+                                // Get a sample of moves (level-up moves and some TMs)
+                                const importantMoves = details.moves.filter(moveData => {
+                                    return moveData.version_group_details.some(detail => 
+                                        detail.move_learn_method.name === 'level-up' && detail.level_learned_at <= 50
+                                    ) || moveData.version_group_details.some(detail => 
+                                        detail.move_learn_method.name === 'machine'
+                                    );
+                                }).slice(0, 20); // Limit to 20 most important moves
+                                
+                                const movePromises = importantMoves.map(async (moveData) => {
+                                    try {
+                                        const moveDetails = await this.getMoveDetails(moveData.move.name);
+                                        return {
+                                            ...moveData,
+                                            details: moveDetails
+                                        };
+                                    } catch (error) {
+                                        console.warn(`Could not fetch move ${moveData.move.name}:`, error);
+                                        return moveData;
+                                    }
+                                });
+                                detailedMoves = await Promise.all(movePromises);
+                            }
+                        } catch (error) {
+                            console.warn(`Could not fetch detailed moves for ${pokemon.name}:`, error);
+                            detailedMoves = details.moves || [];
+                        }
+                        
+                        // Get Pokemon description
+                        let description = 'No description available.';
+                        try {
+                            if (species) {
+                                description = await this.getPokemonDescription(species);
+                            }
+                        } catch (error) {
+                            console.warn(`Could not get description for ${pokemon.name}:`, error);
+                        }
+                        
                         const completeData = { 
                             ...details, 
                             species: species || null,
                             encounters: encounters || [],
                             evolutionChain: evolutionChain || null,
-                            forms: forms || []
+                            forms: forms || [],
+                            detailedAbilities: detailedAbilities || details.abilities || [],
+                            detailedMoves: detailedMoves || [],
+                            description: description,
+                            generation: this.getGeneration(details.id),
+                            isLegendary: this.isLegendary(species),
+                            isMythical: this.isMythical(species),
+                            baseStatTotal: details.stats.reduce((sum, stat) => sum + stat.base_stat, 0)
                         };
                         
                         // Cache individual complete Pokemon data
@@ -272,9 +353,9 @@ class PokemonAPI {
                 // Log progress
                 console.log(`Loaded ${detailedPokemon.length}/${maxToProcess} Pokemon...`);
 
-                // Small delay between batches to be respectful to the API
+                // Small delay between batches
                 if (i + batchSize < maxToProcess) {
-                    await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
+                    await new Promise(resolve => setTimeout(resolve, 150));
                 }
             }
 
@@ -313,7 +394,14 @@ class PokemonAPI {
             
             setTimeout(async () => {
                 try {
-                    console.log(`Retrying ${pokemon.name}...`);
+                    const pokemonName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+                    console.log(`Retrying ${pokemonName}...`);
+                    
+                    // Notify renderer about retry
+                    if (window.darkdexApp && window.darkdexApp.updatePokemonDownloadStatus) {
+                        window.darkdexApp.updatePokemonDownloadStatus(`Retrying ${pokemonName}`, existingPokemon.length + i + 1, existingPokemon.length + failedPokemon.length);
+                    }
+                    
                     const details = await this.getPokemon(pokemon.name);
                     if (!details) return;
                     
@@ -356,12 +444,50 @@ class PokemonAPI {
                         console.warn(`Could not fetch forms for ${pokemon.name}:`, error);
                     }
                     
+                    // Get detailed abilities
+                    let detailedAbilities = [];
+                    try {
+                        if (details.abilities && details.abilities.length > 0) {
+                            const abilityPromises = details.abilities.map(async (abilityData) => {
+                                try {
+                                    const abilityDetails = await this.getAbility(abilityData.ability.name);
+                                    return {
+                                        ...abilityData,
+                                        details: abilityDetails
+                                    };
+                                } catch (error) {
+                                    return abilityData;
+                                }
+                            });
+                            detailedAbilities = await Promise.all(abilityPromises);
+                        }
+                    } catch (error) {
+                        detailedAbilities = details.abilities || [];
+                    }
+                    
+                    // Get description
+                    let description = 'No description available.';
+                    try {
+                        if (species) {
+                            description = await this.getPokemonDescription(species);
+                        }
+                    } catch (error) {
+                        // Use default description
+                    }
+                    
                     const completeData = { 
                         ...details, 
                         species: species || null,
                         encounters: encounters || [],
                         evolutionChain: evolutionChain || null,
-                        forms: forms || []
+                        forms: forms || [],
+                        detailedAbilities: detailedAbilities || details.abilities || [],
+                        detailedMoves: [], // Skip detailed moves for retries to save time
+                        description: description,
+                        generation: this.getGeneration(details.id),
+                        isLegendary: this.isLegendary(species),
+                        isMythical: this.isMythical(species),
+                        baseStatTotal: details.stats.reduce((sum, stat) => sum + stat.base_stat, 0)
                     };
                     
                     // Cache the data
@@ -373,7 +499,7 @@ class PokemonAPI {
                         existingPokemon.push(completeData);
                         existingPokemon.sort((a, b) => a.id - b.id);
                         window.searchManager.setPokemonData(existingPokemon);
-                        console.log(`Successfully loaded ${pokemon.name} in background. Total: ${existingPokemon.length}`);
+                        console.log(`Successfully loaded ${pokemonName} in background. Total: ${existingPokemon.length}`);
                     }
                     
                 } catch (error) {
