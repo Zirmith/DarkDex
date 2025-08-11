@@ -265,49 +265,18 @@ class SearchManager {
         return card;
     }
 
-    async showPokemonModal(pokemon) {
-        try {
-            // Validate pokemon data
-            if (!pokemon || !pokemon.id) {
-                console.error('Invalid pokemon data provided to modal');
-                return;
-            }
-            
-            const modal = document.getElementById('pokemon-modal');
-            if (!modal) return;
+    showPokemonModal(pokemon) {
+        const modal = document.getElementById('pokemon-modal');
+        if (!modal) return;
 
-            // Store current pokemon for reference
-            modal.currentPokemon = pokemon;
+        modal.currentPokemon = pokemon;
+        modal.style.display = 'block';
 
-            // Get complete pokemon data
-            let completePokemon;
-            try {
-                completePokemon = await window.pokemonAPI.getCompletePokemonData(pokemon.name || pokemon.id);
-            } catch (error) {
-                console.error(`Error loading complete data for ${pokemon.name}:`, error);
-                // Use the basic pokemon data we have
-                completePokemon = pokemon;
-            }
-            
-            if (completePokemon) {
-                modal.currentPokemon = completePokemon;
-            }
+        // Update modal content
+        this.updateModalContent(pokemon);
 
-            // Update modal content
-            this.updateModalContent(modal.currentPokemon);
-
-            // Show modal
-            modal.style.display = 'flex';
-        } catch (error) {
-            console.error(`Error showing Pokemon modal for ${pokemon.name}:`, error);
-            // Show a basic modal with available data
-            const modal = document.getElementById('pokemon-modal');
-            if (modal) {
-                modal.currentPokemon = pokemon;
-                this.updateModalContent(pokemon);
-                modal.style.display = 'flex';
-            }
-        }
+        // Setup modal event listeners
+        this.setupModalEventListeners();
     }
 
     updateModalContent(pokemon) {
@@ -685,6 +654,9 @@ class SearchManager {
                 <div class="evolution-pokemon" data-pokemon="${pokemon.name}">
                     <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png" alt="${pokemon.name}">
                     <div class="name">${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}</div>
+                    <button class="btn-secondary" style="margin-top: 8px; padding: 4px 8px; font-size: 11px;" onclick="event.stopPropagation(); window.audioManager.playPokemonCry(${pokemon.id})">
+                        <i class="ri-volume-up-line"></i>
+                    </button>
                 </div>
             `;
 

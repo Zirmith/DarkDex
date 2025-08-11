@@ -268,6 +268,10 @@ class PokemonAPI {
                     } catch (error) {
                         console.error(`Error fetching ${pokemon.name}:`, error);
                         failedPokemon.push(pokemon);
+                        // Add to failed list for retry functionality
+                        if (!this.failedPokemon.find(p => p.name === pokemon.name)) {
+                            this.failedPokemon.push(pokemon);
+                        }
                         return null;
                     }
                 });
