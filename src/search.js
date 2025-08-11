@@ -778,6 +778,119 @@ class SearchManager {
         });
     }
 
+    hasSpecialForms(pokemon) {
+        // Check if Pokemon has known alternate forms
+        const specialFormPokemon = [
+            'deoxys', 'wormadam', 'rotom', 'giratina', 'shaymin', 'arceus',
+            'basculin', 'darmanitan', 'deerling', 'sawsbuck', 'tornadus', 'thundurus',
+            'landorus', 'kyurem', 'keldeo', 'meloetta', 'genesect', 'vivillon',
+            'flabebe', 'floette', 'florges', 'furfrou', 'pumpkaboo', 'gourgeist',
+            'hoopa', 'oricorio', 'lycanroc', 'wishiwashi', 'minior', 'mimikyu',
+            'necrozma', 'magearna', 'cramorant', 'toxapex', 'eiscue', 'morpeko',
+            'zacian', 'zamazenta', 'eternatus', 'urshifu', 'calyrex'
+        ];
+        
+        return specialFormPokemon.includes(pokemon.name.toLowerCase()) || 
+               (pokemon.forms && pokemon.forms.length > 1);
+    }
+
+    getAllPokemonForms(pokemon) {
+        const forms = [];
+        
+        // Add base form
+        forms.push({
+            name: pokemon.name,
+            is_default: true,
+            sprites: pokemon.sprites,
+            types: pokemon.types,
+            stats: pokemon.stats
+        });
+        
+        // Add additional forms if available
+        if (pokemon.forms && pokemon.forms.length > 1) {
+            pokemon.forms.forEach(form => {
+                if (form.name !== pokemon.name) {
+                    forms.push({
+                        name: form.name,
+                        is_default: false,
+                        url: form.url,
+                        sprites: pokemon.sprites, // Use base sprites as fallback
+                        types: pokemon.types,
+                        stats: pokemon.stats
+                    });
+                }
+            });
+        }
+        
+        return forms;
+    }
+
+    getFormDisplayName(form, pokemon) {
+        if (form.is_default || form.name === pokemon.name) {
+            return pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+        }
+        
+        // Clean up form name
+        let formName = form.name.replace(pokemon.name + '-', '');
+        formName = formName.replace('-', ' ');
+        formName = formName.replace(/\b\w/g, l => l.toUpperCase());
+        
+        return `${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)} (${formName})`;
+    }
+
+    getFormType(form, pokemon) {
+        if (form.is_default) {
+            return 'Base Form';
+        }
+        
+        const formName = form.name.toLowerCase();
+        
+        if (formName.includes('mega')) return 'Mega Evolution';
+        if (formName.includes('alola')) return 'Alolan Form';
+        if (formName.includes('galar')) return 'Galarian Form';
+        if (formName.includes('hisui')) return 'Hisuian Form';
+        if (formName.includes('paldea')) return 'Paldean Form';
+        if (formName.includes('gigantamax')) return 'Gigantamax';
+        if (formName.includes('primal')) return 'Primal Reversion';
+        if (formName.includes('origin')) return 'Origin Form';
+        if (formName.includes('sky')) return 'Sky Form';
+        if (formName.includes('heat') || formName.includes('wash') || formName.includes('frost') || 
+            formName.includes('fan') || formName.includes('mow')) return 'Rotom Form';
+        
+        return 'Alternate Form';
+    }
+
+    getFormSpriteUrl(form, pokemon) {
+        // Try to get form-specific sprite
+        if (form.sprites && form.sprites.front_default) {
+            return form.sprites.front_default;
+        }
+        
+        // Try to construct form sprite URL
+        if (!form.is_default && form.name !== pokemon.name) {
+            const formId = form.name.replace('-', '_');
+            return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${formId}.png`;
+        }
+        
+        // Fallback to base sprite
+        return pokemon.sprites.front_default || pokemon.sprites.other?.['official-artwork']?.front_default;
+    }
+
+    getFormTypes(form, pokemon) {
+        const types = form.types || pokemon.types;
+        return types.map(type => 
+            `<span class="type-badge ${type.type.name}">${type.type.name}</span>`
+        ).join('');
+    }
+
+    getFormStats(form, pokemon) {
+        const stats = form.stats || pokemon.stats;
+        if (!stats) return null;
+        
+        const baseStatTotal = stats.reduce((sum, stat) => sum + stat.base_stat, 0);
+        return `BST: ${baseStatTotal}`;
+    }
+
     updateLocationsTab(pokemon) {
         const locationsContainer = document.getElementById('modal-pokemon-locations');
         if (!locationsContainer) return;
