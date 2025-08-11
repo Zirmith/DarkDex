@@ -201,8 +201,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/your-username/darkdex/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/darkdex/discussions)
+- **Issues**: [GitHub Issues](https://github.com/Zirmith/darkdex/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Zirmith/darkdex/discussions)
 - **Email**: support@darkdex.com
 
 ---
