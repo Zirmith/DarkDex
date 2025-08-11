@@ -400,12 +400,6 @@ class DarkDexApp {
 
     async checkIfCached(key) {
         try {
-            // Check memory cache first
-            if (window.pokemonAPI.cache.has(key)) {
-                return true;
-            }
-            
-            // Check local cache
             if (typeof window !== 'undefined' && window.electronAPI) {
                 const result = await window.electronAPI.invoke('get-cached-data', window.pokemonAPI.sanitizeKey(key));
                 return result.success;

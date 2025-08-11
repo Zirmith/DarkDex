@@ -52,12 +52,6 @@ class PokemonAPI {
     async fetchData(url, cacheKey = null) {
         const key = cacheKey || url;
         
-        // Skip if no URL provided and no cache key
-        if (!url && !cacheKey) {
-            console.warn('No URL or cache key provided to fetchData');
-            return null;
-        }
-        
         // Try cache first
         if (this.cache.has(key)) {
             this.cacheStats.hits++;
@@ -65,26 +59,18 @@ class PokemonAPI {
         }
 
         // Try local cache
-        if (cacheKey || key !== url) {
-            try {
-                if (typeof window !== 'undefined' && window.electronAPI) {
-                    const cachedResult = await window.electronAPI.invoke('get-cached-data', this.sanitizeKey(key));
-                    if (cachedResult.success) {
-                        this.cache.set(key, cachedResult.data);
-                        this.cacheStats.hits++;
-                        return cachedResult.data;
-                    }
+        try {
+            if (typeof window !== 'undefined' && window.electronAPI) {
+                const cachedResult = await window.electronAPI.invoke('get-cached-data', this.sanitizeKey(key));
+                if (cachedResult.success) {
+                    this.cache.set(key, cachedResult.data);
+                    this.cacheStats.hits++;
+                    return cachedResult.data;
                 }
-            } catch (error) {
-                console.warn('Cache read error:', error);
-                this.cacheStats.errors++;
             }
-        }
-
-        // If no URL provided, we can't fetch from API
-        if (!url) {
-            this.cacheStats.misses++;
-            return null;
+        } catch (error) {
+            console.warn('Cache read error:', error);
+            this.cacheStats.errors++;
         }
 
         // If offline and no cache, return error
@@ -302,20 +288,9 @@ class PokemonAPI {
             // Try to load individual cached Pokemon - check more extensively
             for (let i = 1; i <= 2000; i++) { // Check up to 2000 to catch any future Pokemon
                 try {
-                    // Check memory cache first
-                    const cacheKey = `complete_pokemon_${i}`;
-                    if (this.cache.has(cacheKey)) {
-                        cachedPokemon.push(this.cache.get(cacheKey));
-                        continue;
-                    }
-                    
-                    // Check local cache
-                    if (typeof window !== 'undefined' && window.electronAPI) {
-                        const cachedResult = await window.electronAPI.invoke('get-cached-data', this.sanitizeKey(cacheKey));
-                        if (cachedResult.success) {
-                            this.cache.set(cacheKey, cachedResult.data);
-                            cachedPokemon.push(cachedResult.data);
-                        }
+                    const cached = await window.pokemonAPI.fetchData(null, `complete_pokemon_${i}`);
+                    if (cached) {
+                        cachedPokemon.push(cached);
                     }
                 } catch (error) {
                     // Skip missing cache entries
@@ -385,29 +360,7 @@ class PokemonAPI {
         try {
             // Check if we have complete cached data
             const cacheKey = `complete_pokemon_${idOrName}`;
-            
-            // Try to get from cache first without making API call
-            if (this.cache.has(cacheKey)) {
-                this.cacheStats.hits++;
-                return this.cache.get(cacheKey);
-            }
-            
-            // Try local cache
-            try {
-                if (typeof window !== 'undefined' && window.electronAPI) {
-                    const cachedResult = await window.electronAPI.invoke('get-cached-data', this.sanitizeKey(cacheKey));
-                    if (cachedResult.success) {
-                        this.cache.set(cacheKey, cachedResult.data);
-                        this.cacheStats.hits++;
-                        return cachedResult.data;
-                    }
-                }
-            } catch (error) {
-                console.warn('Cache read error for complete Pokemon data:', error);
-            }
-            
-            // If no cached data, fetch from API
-            const cached = null;
+            const cached = await this.fetchData(null, cacheKey);
             if (cached) return cached;
             
             // Fetch all data
@@ -488,24 +441,6 @@ class PokemonAPI {
             total: { size: 0, files: 0 },
             performance: this.cacheStats
         };
-    }
-
-    async checkIfCached(key) {
-        try {
-            // Check memory cache first
-            if (this.cache.has(key)) {
-                return true;
-            }
-            
-            // Check local cache
-            if (typeof window !== 'undefined' && window.electronAPI) {
-                const result = await window.electronAPI.invoke('get-cached-data', window.pokemonAPI.sanitizeKey(key));
-                return result.success;
-            }
-        } catch (error) {
-            console.error('Error checking cache:', error);
-        }
-        return false;
     }
 
     formatBytes(bytes) {
