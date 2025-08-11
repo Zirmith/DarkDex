@@ -6,7 +6,7 @@ class DarkDexApp {
         this.loadingProgress = 0;
         this.totalSteps = 4;
         this.pokemonLoadProgress = 0;
-        this.totalPokemon = 1010;
+        this.totalPokemon = 1302;
         this.allPokemonData = [];
         this.init();
     }

@@ -127,10 +127,11 @@ class PokemonAPI {
         return key.replace(/[^a-zA-Z0-9-_]/g, '_');
     }
 
-    async getPokemonList(limit = 1010, offset = 0) {
+    async getPokemonList(limitc = 1302, offset = 0) {
         // Get all Pokemon without limit
-        const url = `${this.baseUrl}/pokemon?limit=100000&offset=${offset}`;
-        return await this.fetchData(url, `pokemon_list_${limit}_${offset}`);
+        const url = `${this.baseUrl}/pokemon?limit=${limitc}`;
+        console.log(url)
+        return await this.fetchData(url, `pokemon_list_${limitc}_${offset}`);
     }
 
     async getPokemon(idOrName) {
@@ -173,7 +174,7 @@ class PokemonAPI {
         return await this.fetchData(url, `encounters_${pokemonId}`);
     }
 
-    async getAllPokemon(maxPokemon = 1010) {
+    async getAllPokemon(maxPokemon = 1302) {
         try {
             // Try to get cached complete Pokemon data first
             const cachedAllPokemon = await this.getCachedAllPokemon();
@@ -192,7 +193,7 @@ class PokemonAPI {
             const detailedPokemon = [];
 
             // Process in smaller batches to avoid overwhelming the API
-            const batchSize = 10;
+            const batchSize = 5;
             const maxToProcess = Math.min(pokemonList.results.length, maxPokemon);
             
             for (let i = 0; i < maxToProcess; i += batchSize) {
@@ -305,7 +306,7 @@ class PokemonAPI {
             const cachedPokemon = [];
             
             // Try to load individual cached Pokemon
-            for (let i = 1; i <= 1010; i++) {
+            for (let i = 1; i <= 1302; i++) {
                 try {
                     if (typeof window !== 'undefined' && window.electronAPI) {
                         const cachedResult = await window.electronAPI.invoke('get-cached-data', this.sanitizeKey(`complete_pokemon_${i}`));
@@ -352,7 +353,7 @@ class PokemonAPI {
             const cachedPokemon = [];
             
             // Try to load individual cached Pokemon - more comprehensive search
-            for (let i = 1; i <= 1010; i++) {
+            for (let i = 1; i <= 1302; i++) {
                 try {
                     const cached = await this.fetchData(null, `complete_pokemon_${i}`);
                     if (cached && cached.id) {
