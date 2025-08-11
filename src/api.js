@@ -76,7 +76,8 @@ class PokemonAPI {
         // If offline and no cache, return error
         if (!this.isOnline) {
             this.cacheStats.misses++;
-            throw new Error('No internet connection and no cached data available');
+            console.warn(`No cached data for ${key} and offline`);
+            return null; // Return null instead of throwing error
         }
 
         // Fetch from API
@@ -171,7 +172,18 @@ class PokemonAPI {
 
     async getAllPokemon(maxPokemon = 1010) {
         try {
+            // Try to get cached complete Pokemon data first
+            const cachedAllPokemon = await this.getCachedAllPokemon();
+            if (cachedAllPokemon && cachedAllPokemon.length > 0) {
+                console.log(`Loaded ${cachedAllPokemon.length} Pokemon from cache`);
+                return cachedAllPokemon;
+            }
+
             const pokemonList = await this.getPokemonList(maxPokemon, 0);
+            if (!pokemonList) {
+                throw new Error('Could not fetch Pokemon list');
+            }
+            
             const detailedPokemon = [];
 
             // Process in batches to avoid overwhelming the API
@@ -181,8 +193,27 @@ class PokemonAPI {
                 const batchPromises = batch.map(async (pokemon) => {
                     try {
                         const details = await this.getPokemon(pokemon.name);
+                        if (!details) return null;
+                        
                         const species = await this.getPokemonSpecies(pokemon.name);
-                        return { ...details, species };
+                        if (!species) return { ...details, species: null };
+                        
+                        // Get additional data
+                        const encounters = await this.getPokemonEncounters(details.id).catch(() => []);
+                        
+                        // Get evolution chain if available
+                        let evolutionChain = null;
+                        if (species.evolution_chain?.url) {
+                            const evolutionId = species.evolution_chain.url.split('/').slice(-2, -1)[0];
+                            evolutionChain = await this.getEvolutionChain(evolutionId).catch(() => null);
+                        }
+                        
+                        return { 
+                            ...details, 
+                            species, 
+                            encounters: encounters || [],
+                            evolutionChain
+                        };
                     } catch (error) {
                         console.error(`Error fetching ${pokemon.name}:`, error);
                         return null;
@@ -198,6 +229,9 @@ class PokemonAPI {
                 }
             }
 
+            // Cache the complete Pokemon data
+            await this.cacheAllPokemon(detailedPokemon);
+            
             return detailedPokemon;
         } catch (error) {
             console.error('Error fetching all Pokemon:', error);
@@ -205,8 +239,37 @@ class PokemonAPI {
         }
     }
 
+    async getCachedAllPokemon() {
+        try {
+            if (typeof window !== 'undefined' && window.electronAPI) {
+                const cachedResult = await window.electronAPI.invoke('get-cached-data', 'all_pokemon_complete');
+                if (cachedResult.success && cachedResult.data && Array.isArray(cachedResult.data)) {
+                    return cachedResult.data;
+                }
+            }
+        } catch (error) {
+            console.warn('Error getting cached all Pokemon:', error);
+        }
+        return null;
+    }
+
+    async cacheAllPokemon(pokemonData) {
+        try {
+            if (typeof window !== 'undefined' && window.electronAPI) {
+                await window.electronAPI.invoke('cache-data', 'all_pokemon_complete', pokemonData);
+                console.log(`Cached ${pokemonData.length} complete Pokemon records`);
+            }
+        } catch (error) {
+            console.warn('Error caching all Pokemon:', error);
+        }
+    }
+
     async getPokemonDescription(species) {
         try {
+            if (!species || !species.flavor_text_entries) {
+                return 'No description available.';
+            }
+            
             const flavorTexts = species.flavor_text_entries;
             const englishTexts = flavorTexts.filter(text => text.language.name === 'en');
             
@@ -239,11 +302,49 @@ class PokemonAPI {
     }
 
     isLegendary(species) {
-        return species.is_legendary || false;
+        return species && species.is_legendary || false;
     }
 
     isMythical(species) {
-        return species.is_mythical || false;
+        return species && species.is_mythical || false;
+    }
+
+    async getCompletePokemonData(idOrName) {
+        try {
+            // Check if we have complete cached data
+            const cacheKey = `complete_pokemon_${idOrName}`;
+            const cached = await this.fetchData(null, cacheKey);
+            if (cached) return cached;
+            
+            // Fetch all data
+            const pokemon = await this.getPokemon(idOrName);
+            if (!pokemon) return null;
+            
+            const species = await this.getPokemonSpecies(idOrName);
+            const encounters = await this.getPokemonEncounters(pokemon.id).catch(() => []);
+            
+            let evolutionChain = null;
+            if (species && species.evolution_chain?.url) {
+                const evolutionId = species.evolution_chain.url.split('/').slice(-2, -1)[0];
+                evolutionChain = await this.getEvolutionChain(evolutionId).catch(() => null);
+            }
+            
+            const completeData = {
+                ...pokemon,
+                species,
+                encounters: encounters || [],
+                evolutionChain,
+                description: await this.getPokemonDescription(species)
+            };
+            
+            // Cache the complete data
+            await this.cacheData(cacheKey, completeData);
+            
+            return completeData;
+        } catch (error) {
+            console.error(`Error getting complete Pokemon data for ${idOrName}:`, error);
+            return null;
+        }
     }
 
     async clearDataCache() {

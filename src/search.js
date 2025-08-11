@@ -11,23 +11,33 @@ class SearchManager {
         this.setupEventListeners();
     }
 
+    setPokemonData(pokemonData) {
+        this.allPokemon = pokemonData || [];
+        this.applyFilters();
+        this.renderPokemonGrid();
+    }
+
     setupEventListeners() {
         // Search input
         const searchInput = document.getElementById('search-input');
-        const clearSearchBtn = document.getElementById('clear-search');
-
+        const clearSearch = document.getElementById('clear-search');
+        
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 this.currentFilters.search = e.target.value.toLowerCase().trim();
                 this.applyFilters();
+                this.renderPokemonGrid();
             });
         }
 
-        if (clearSearchBtn) {
-            clearSearchBtn.addEventListener('click', () => {
-                searchInput.value = '';
-                this.currentFilters.search = '';
-                this.applyFilters();
+        if (clearSearch) {
+            clearSearch.addEventListener('click', () => {
+                if (searchInput) {
+                    searchInput.value = '';
+                    this.currentFilters.search = '';
+                    this.applyFilters();
+                    this.renderPokemonGrid();
+                }
             });
         }
 
@@ -37,21 +47,29 @@ class SearchManager {
             generationFilter.addEventListener('change', (e) => {
                 this.currentFilters.generation = e.target.value;
                 this.applyFilters();
+                this.renderPokemonGrid();
             });
         }
 
         // Type filters
-        const typeFilters = document.getElementById('type-filters');
-        if (typeFilters) {
-            typeFilters.addEventListener('click', (e) => {
-                if (e.target.classList.contains('type-filter')) {
-                    const type = e.target.dataset.type;
-                    this.toggleTypeFilter(type);
-                    e.target.classList.toggle('active');
-                    this.applyFilters();
+        const typeFilters = document.querySelectorAll('.type-filter');
+        typeFilters.forEach(filter => {
+            filter.addEventListener('click', (e) => {
+                const type = e.target.dataset.type;
+                const isActive = e.target.classList.contains('active');
+                
+                if (isActive) {
+                    e.target.classList.remove('active');
+                    this.currentFilters.types = this.currentFilters.types.filter(t => t !== type);
+                } else {
+                    e.target.classList.add('active');
+                    this.currentFilters.types.push(type);
                 }
+                
+                this.applyFilters();
+                this.renderPokemonGrid();
             });
-        }
+        });
 
         // Sort filter
         const sortFilter = document.getElementById('sort-filter');
@@ -59,435 +77,275 @@ class SearchManager {
             sortFilter.addEventListener('change', (e) => {
                 this.currentFilters.sort = e.target.value;
                 this.applyFilters();
+                this.renderPokemonGrid();
             });
         }
 
         // Clear filters
-        const clearFiltersBtn = document.getElementById('clear-filters');
-        if (clearFiltersBtn) {
-            clearFiltersBtn.addEventListener('click', () => {
+        const clearFilters = document.getElementById('clear-filters');
+        if (clearFilters) {
+            clearFilters.addEventListener('click', () => {
                 this.clearAllFilters();
             });
         }
 
         // Cache management
-        const cacheManagementBtn = document.getElementById('cache-management');
-        if (cacheManagementBtn) {
-            cacheManagementBtn.addEventListener('click', () => {
-                this.openCacheManagement();
+        const cacheManagement = document.getElementById('cache-management');
+        if (cacheManagement) {
+            cacheManagement.addEventListener('click', () => {
+                this.showCacheManagement();
             });
-        }
-    }
-
-    async openCacheManagement() {
-        const modal = document.getElementById('cache-modal');
-        const statsContainer = document.getElementById('cache-stats');
-        const actionsContainer = document.getElementById('cache-actions');
-        
-        modal.style.display = 'block';
-        
-        // Show loading state
-        statsContainer.innerHTML = `
-            <div class="loading-spinner">
-                <i class="ri-loader-4-line"></i>
-            </div>
-            <p>Loading cache statistics...</p>
-        `;
-        actionsContainer.style.display = 'none';
-        
-        try {
-            const stats = await window.pokemonAPI.getCacheStats();
-            
-            // Display cache statistics
-            statsContainer.innerHTML = `
-                <div class="cache-overview">
-                    <div class="cache-stat-card">
-                        <div class="cache-stat-header">
-                            <i class="ri-database-2-line"></i>
-                            <h3>Total Cache</h3>
-                        </div>
-                        <div class="cache-stat-value">
-                            <span class="size">${window.pokemonAPI.formatBytes(stats.total.size)}</span>
-                            <span class="files">${stats.total.files} files</span>
-                        </div>
-                    </div>
-                    
-                    <div class="cache-breakdown">
-                        <div class="cache-item">
-                            <div class="cache-item-info">
-                                <i class="ri-database-line"></i>
-                                <span>Pokemon Data</span>
-                            </div>
-                            <div class="cache-item-stats">
-                                <span class="size">${window.pokemonAPI.formatBytes(stats.data.size)}</span>
-                                <span class="files">${stats.data.files} files</span>
-                            </div>
-                        </div>
-                        
-                        <div class="cache-item">
-                            <div class="cache-item-info">
-                                <i class="ri-image-line"></i>
-                                <span>Sprites</span>
-                            </div>
-                            <div class="cache-item-stats">
-                                <span class="size">${window.pokemonAPI.formatBytes(stats.sprites.size)}</span>
-                                <span class="files">${stats.sprites.files} files</span>
-                            </div>
-                        </div>
-                        
-                        <div class="cache-item">
-                            <div class="cache-item-info">
-                                <i class="ri-volume-up-line"></i>
-                                <span>Audio</span>
-                            </div>
-                            <div class="cache-item-stats">
-                                <span class="size">${window.pokemonAPI.formatBytes(stats.audio.size)}</span>
-                                <span class="files">${stats.audio.files} files</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="cache-performance">
-                        <h4>Performance Statistics</h4>
-                        <div class="performance-stats">
-                            <div class="perf-stat">
-                                <span class="label">Cache Hits:</span>
-                                <span class="value success">${stats.performance.hits}</span>
-                            </div>
-                            <div class="perf-stat">
-                                <span class="label">Cache Misses:</span>
-                                <span class="value warning">${stats.performance.misses}</span>
-                            </div>
-                            <div class="perf-stat">
-                                <span class="label">Errors:</span>
-                                <span class="value error">${stats.performance.errors}</span>
-                            </div>
-                            <div class="perf-stat">
-                                <span class="label">Hit Rate:</span>
-                                <span class="value">${stats.performance.hits + stats.performance.misses > 0 ? 
-                                    Math.round((stats.performance.hits / (stats.performance.hits + stats.performance.misses)) * 100) : 0}%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Show actions
-            actionsContainer.style.display = 'block';
-            
-            // Setup cache action buttons
-            this.setupCacheActions();
-            
-        } catch (error) {
-            console.error('Error loading cache stats:', error);
-            statsContainer.innerHTML = `
-                <div class="cache-error">
-                    <i class="ri-error-warning-line"></i>
-                    <p>Failed to load cache statistics</p>
-                    <small>${error.message}</small>
-                </div>
-            `;
-        }
-        
-        // Setup modal close
-        const closeBtn = document.getElementById('close-cache-modal');
-        closeBtn.onclick = () => {
-            modal.style.display = 'none';
-        };
-        
-        modal.onclick = (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-            }
-        };
-    }
-
-    setupCacheActions() {
-        const clearDataBtn = document.getElementById('clear-data-cache');
-        const clearSpriteBtn = document.getElementById('clear-sprite-cache');
-        const clearAudioBtn = document.getElementById('clear-audio-cache');
-        const clearAllBtn = document.getElementById('clear-all-cache');
-        
-        if (clearDataBtn) {
-            clearDataBtn.onclick = async () => {
-                if (confirm('Clear Pokemon data cache? This will require re-downloading Pokemon information.')) {
-                    await window.darkdexApp.clearCache('data');
-                    this.openCacheManagement(); // Refresh stats
-                }
-            };
-        }
-        
-        if (clearSpriteBtn) {
-            clearSpriteBtn.onclick = async () => {
-                if (confirm('Clear sprite cache? This will require re-downloading Pokemon sprites.')) {
-                    await window.darkdexApp.clearCache('sprites');
-                    this.openCacheManagement(); // Refresh stats
-                }
-            };
-        }
-        
-        if (clearAudioBtn) {
-            clearAudioBtn.onclick = async () => {
-                if (confirm('Clear audio cache? This will require re-downloading audio files.')) {
-                    await window.darkdexApp.clearCache('audio');
-                    this.openCacheManagement(); // Refresh stats
-                }
-            };
-        }
-        
-        if (clearAllBtn) {
-            clearAllBtn.onclick = async () => {
-                if (confirm('Clear ALL cache? This will require re-downloading everything and may take some time.')) {
-                    await window.darkdexApp.clearCache('all');
-                    this.openCacheManagement(); // Refresh stats
-                }
-            };
-        }
-    }
-
-    setPokemonData(pokemonList) {
-        this.allPokemon = pokemonList;
-        this.filteredPokemon = [...pokemonList];
-        this.applyFilters();
-    }
-
-    toggleTypeFilter(type) {
-        const index = this.currentFilters.types.indexOf(type);
-        if (index > -1) {
-            this.currentFilters.types.splice(index, 1);
-        } else {
-            this.currentFilters.types.push(type);
         }
     }
 
     applyFilters() {
         let filtered = [...this.allPokemon];
 
-        // Apply search filter
+        // Search filter
         if (this.currentFilters.search) {
             filtered = filtered.filter(pokemon => {
                 const searchTerm = this.currentFilters.search;
                 return (
                     pokemon.name.toLowerCase().includes(searchTerm) ||
-                    pokemon.id.toString() === searchTerm
+                    pokemon.id.toString().includes(searchTerm) ||
+                    (pokemon.species && pokemon.species.names && 
+                     pokemon.species.names.some(name => 
+                         name.language.name === 'en' && 
+                         name.name.toLowerCase().includes(searchTerm)
+                     ))
                 );
             });
         }
 
-        // Apply generation filter
+        // Generation filter
         if (this.currentFilters.generation) {
-            const generation = parseInt(this.currentFilters.generation);
+            const gen = parseInt(this.currentFilters.generation);
             filtered = filtered.filter(pokemon => {
-                return window.pokemonAPI.getGeneration(pokemon.id) === generation;
+                return window.pokemonAPI.getGeneration(pokemon.id) === gen;
             });
         }
 
-        // Apply type filters
+        // Type filters
         if (this.currentFilters.types.length > 0) {
             filtered = filtered.filter(pokemon => {
-                return pokemon.types.some(typeInfo => 
-                    this.currentFilters.types.includes(typeInfo.type.name)
+                return pokemon.types.some(type => 
+                    this.currentFilters.types.includes(type.type.name)
                 );
             });
         }
 
-        // Apply sorting
-        filtered = this.sortPokemon(filtered, this.currentFilters.sort);
-
-        this.filteredPokemon = filtered;
-        this.renderResults();
-    }
-
-    sortPokemon(pokemon, sortBy) {
-        const sortedPokemon = [...pokemon];
-
-        switch (sortBy) {
-            case 'id':
-                return sortedPokemon.sort((a, b) => a.id - b.id);
-            
-            case 'name':
-                return sortedPokemon.sort((a, b) => a.name.localeCompare(b.name));
-            
-            case 'base-stat-total':
-                return sortedPokemon.sort((a, b) => {
+        // Sort
+        filtered.sort((a, b) => {
+            switch (this.currentFilters.sort) {
+                case 'name':
+                    return a.name.localeCompare(b.name);
+                case 'base-stat-total':
                     const totalA = a.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
                     const totalB = b.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
                     return totalB - totalA;
-                });
-            
-            case 'height':
-                return sortedPokemon.sort((a, b) => b.height - a.height);
-            
-            case 'weight':
-                return sortedPokemon.sort((a, b) => b.weight - a.weight);
-            
-            default:
-                return sortedPokemon;
-        }
+                case 'height':
+                    return b.height - a.height;
+                case 'weight':
+                    return b.weight - a.weight;
+                case 'id':
+                default:
+                    return a.id - b.id;
+            }
+        });
+
+        this.filteredPokemon = filtered;
     }
 
-    renderResults() {
-        const grid = document.getElementById('pokemon-grid');
-        if (!grid) return;
+    clearAllFilters() {
+        // Clear search
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.value = '';
+        }
 
-        // Clear existing results
-        grid.innerHTML = '';
+        // Clear generation
+        const generationFilter = document.getElementById('generation-filter');
+        if (generationFilter) {
+            generationFilter.value = '';
+        }
 
-        // Show loading if no results
+        // Clear type filters
+        const typeFilters = document.querySelectorAll('.type-filter.active');
+        typeFilters.forEach(filter => {
+            filter.classList.remove('active');
+        });
+
+        // Reset sort
+        const sortFilter = document.getElementById('sort-filter');
+        if (sortFilter) {
+            sortFilter.value = 'id';
+        }
+
+        // Reset filters object
+        this.currentFilters = {
+            search: '',
+            generation: '',
+            types: [],
+            sort: 'id'
+        };
+
+        this.applyFilters();
+        this.renderPokemonGrid();
+    }
+
+    renderPokemonGrid() {
+        const pokemonGrid = document.getElementById('pokemon-grid');
+        if (!pokemonGrid) return;
+
         if (this.filteredPokemon.length === 0) {
-            grid.innerHTML = `
+            pokemonGrid.innerHTML = `
                 <div class="no-results">
-                    <i class="ri-search-line"></i>
-                    <p>No Pokémon found matching your criteria</p>
-                    <button onclick="searchManager.clearAllFilters()" class="btn-secondary">
-                        Clear Filters
-                    </button>
+                    <i class="ri-ghost-2-line"></i>
+                    <p>No Shadow Pokémon Found</p>
+                    <small>Try adjusting your search or filters</small>
                 </div>
             `;
             return;
         }
 
-        // Render Pokemon cards
+        pokemonGrid.innerHTML = '';
+
         this.filteredPokemon.forEach(pokemon => {
             const card = this.createPokemonCard(pokemon);
-            grid.appendChild(card);
+            pokemonGrid.appendChild(card);
         });
-
-        // Update sprite elements
-        window.spriteManager.refreshAllSprites();
     }
 
     createPokemonCard(pokemon) {
         const card = document.createElement('div');
-        card.className = 'pokemon-card';
-        card.pokemonData = pokemon; // Store reference for sprite updates
+        card.className = 'pokemon-card fade-in';
+        card.pokemonData = pokemon;
 
-        // Calculate stats for preview
-        const stats = pokemon.stats;
-        const hp = stats.find(s => s.stat.name === 'hp')?.base_stat || 0;
-        const attack = stats.find(s => s.stat.name === 'attack')?.base_stat || 0;
-        const defense = stats.find(s => s.stat.name === 'defense')?.base_stat || 0;
-
-        // Get types
-        const typeElements = pokemon.types.map(typeInfo => 
-            `<span class="type-badge ${typeInfo.type.name}">${typeInfo.type.name}</span>`
-        ).join('');
+        // Calculate base stat total
+        const baseStatTotal = pokemon.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
 
         card.innerHTML = `
             <div class="pokemon-card-header">
-                <div>
-                    <div class="pokemon-id">#${pokemon.id.toString().padStart(3, '0')}</div>
-                    <h3 class="pokemon-name">${pokemon.name}</h3>
-                </div>
+                <div class="pokemon-id">#${pokemon.id.toString().padStart(3, '0')}</div>
             </div>
-            <img class="pokemon-sprite" src="${pokemon.sprites.front_default || ''}" alt="${pokemon.name}">
+            <div class="pokemon-name">${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}</div>
+            <img class="pokemon-sprite" src="${pokemon.sprites.front_default}" alt="${pokemon.name}">
             <div class="pokemon-types">
-                ${typeElements}
+                ${pokemon.types.map(type => 
+                    `<span class="type-badge ${type.type.name}">${type.type.name}</span>`
+                ).join('')}
             </div>
             <div class="pokemon-stats-preview">
                 <div class="stat-item">
-                    <div class="stat-label">HP</div>
-                    <div class="stat-value">${hp}</div>
+                    <div class="stat-label">BST</div>
+                    <div class="stat-value">${baseStatTotal}</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">ATK</div>
-                    <div class="stat-value">${attack}</div>
+                    <div class="stat-label">Height</div>
+                    <div class="stat-value">${(pokemon.height / 10).toFixed(1)}m</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">DEF</div>
-                    <div class="stat-value">${defense}</div>
+                    <div class="stat-label">Weight</div>
+                    <div class="stat-value">${(pokemon.weight / 10).toFixed(1)}kg</div>
                 </div>
             </div>
         `;
 
+        // Load sprite using sprite manager
+        const sprite = card.querySelector('.pokemon-sprite');
+        if (window.spriteManager && sprite) {
+            window.spriteManager.updateSpriteElement(sprite, pokemon, { useShowdown: true });
+        }
+
         // Add click event to open modal
         card.addEventListener('click', () => {
-            this.openPokemonModal(pokemon);
+            this.showPokemonModal(pokemon);
         });
-
-        // Update sprite using sprite manager
-        const spriteElement = card.querySelector('.pokemon-sprite');
-        if (window.spriteManager && spriteElement) {
-            window.spriteManager.updateSpriteElement(spriteElement, pokemon, { useShowdown: true });
-        }
 
         return card;
     }
 
-    async openPokemonModal(pokemon) {
+    showPokemonModal(pokemon) {
         const modal = document.getElementById('pokemon-modal');
-        const modalContent = modal.querySelector('.modal-content');
-        
+        if (!modal) return;
+
         modal.currentPokemon = pokemon;
         modal.style.display = 'block';
 
         // Update modal content
-        await this.populateModal(pokemon);
-        
-        // Setup modal controls
-        this.setupModalControls(pokemon);
+        this.updateModalContent(pokemon);
+
+        // Setup modal event listeners
+        this.setupModalEventListeners();
     }
 
-    async populateModal(pokemon) {
+    updateModalContent(pokemon) {
         // Update header
-        document.getElementById('modal-pokemon-name').textContent = pokemon.name;
-        document.getElementById('modal-pokemon-id').textContent = `#${pokemon.id.toString().padStart(3, '0')}`;
+        const modalName = document.getElementById('modal-pokemon-name');
+        if (modalName) {
+            modalName.textContent = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+        }
 
         // Update overview tab
-        await this.populateOverviewTab(pokemon);
-        
-        // Update stats tab
-        this.populateStatsTab(pokemon);
-        
-        // Update moves tab (lazy load)
-        this.populateMovesTab(pokemon);
-        
-        // Update evolution tab (lazy load)
-        this.populateEvolutionTab(pokemon);
-        
-        // Update forms tab (lazy load)
-        this.populateFormsTab(pokemon);
-        
-        // Update locations tab (lazy load)
-        this.populateLocationsTab(pokemon);
+        this.updateOverviewTab(pokemon);
+        this.updateStatsTab(pokemon);
+        this.updateMovesTab(pokemon);
+        this.updateEvolutionTab(pokemon);
+        this.updateFormsTab(pokemon);
+        this.updateLocationsTab(pokemon);
     }
 
-    async populateOverviewTab(pokemon) {
+    updateOverviewTab(pokemon) {
         // Update sprite
-        const spriteElement = document.getElementById('modal-pokemon-sprite');
-        await window.spriteManager.updateSpriteElement(spriteElement, pokemon);
+        const modalSprite = document.getElementById('modal-pokemon-sprite');
+        if (modalSprite && window.spriteManager) {
+            window.spriteManager.updateSpriteElement(modalSprite, pokemon);
+        }
 
         // Update basic info
-        document.getElementById('modal-pokemon-height').textContent = `${pokemon.height / 10} m`;
-        document.getElementById('modal-pokemon-weight').textContent = `${pokemon.weight / 10} kg`;
+        document.getElementById('modal-pokemon-id').textContent = `#${pokemon.id.toString().padStart(3, '0')}`;
+        document.getElementById('modal-pokemon-height').textContent = `${(pokemon.height / 10).toFixed(1)} m`;
+        document.getElementById('modal-pokemon-weight').textContent = `${(pokemon.weight / 10).toFixed(1)} kg`;
         document.getElementById('modal-pokemon-experience').textContent = pokemon.base_experience || 'Unknown';
 
         // Update types
         const typesContainer = document.getElementById('modal-pokemon-types');
-        typesContainer.innerHTML = pokemon.types.map(typeInfo => 
-            `<span class="type-badge ${typeInfo.type.name}">${typeInfo.type.name}</span>`
-        ).join('');
+        if (typesContainer) {
+            typesContainer.innerHTML = pokemon.types.map(type => 
+                `<span class="type-badge ${type.type.name}">${type.type.name}</span>`
+            ).join('');
+        }
 
         // Update abilities
         const abilitiesContainer = document.getElementById('modal-pokemon-abilities');
-        abilitiesContainer.innerHTML = pokemon.abilities.map(abilityInfo => 
-            `<span class="ability-item ${abilityInfo.is_hidden ? 'hidden' : ''}" title="${abilityInfo.is_hidden ? 'Hidden Ability' : 'Normal Ability'}">
-                ${abilityInfo.ability.name.replace('-', ' ')}
-            </span>`
-        ).join('');
+        if (abilitiesContainer) {
+            abilitiesContainer.innerHTML = `
+                <div>
+                    ${pokemon.abilities.map(ability => 
+                        `<span class="ability-item ${ability.is_hidden ? 'hidden' : ''}">${ability.ability.name.replace('-', ' ')}</span>`
+                    ).join('')}
+                </div>
+            `;
+        }
 
         // Update description
-        try {
-            const species = await window.pokemonAPI.getPokemonSpecies(pokemon.id);
-            const description = await window.pokemonAPI.getPokemonDescription(species);
-            document.getElementById('modal-pokemon-description').textContent = description;
-        } catch (error) {
-            document.getElementById('modal-pokemon-description').textContent = 'Description unavailable.';
+        const descriptionElement = document.getElementById('modal-pokemon-description');
+        if (descriptionElement) {
+            if (pokemon.description) {
+                descriptionElement.textContent = pokemon.description;
+            } else if (pokemon.species) {
+                const description = window.pokemonAPI.getPokemonDescription(pokemon.species);
+                descriptionElement.textContent = description;
+            } else {
+                descriptionElement.textContent = 'Loading description...';
+            }
         }
     }
 
-    populateStatsTab(pokemon) {
+    updateStatsTab(pokemon) {
         const statsContainer = document.getElementById('modal-pokemon-stats');
+        if (!statsContainer) return;
+
         const statNames = {
             'hp': 'HP',
             'attack': 'Attack',
@@ -497,705 +355,482 @@ class SearchManager {
             'speed': 'Speed'
         };
 
-        const totalStats = pokemon.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
-
-        let statsHTML = pokemon.stats.map(stat => {
-            const percentage = (stat.base_stat / 255) * 100; // 255 is roughly max base stat
-            const statKey = stat.stat.name;
+        statsContainer.innerHTML = pokemon.stats.map(stat => {
+            const percentage = Math.min((stat.base_stat / 255) * 100, 100);
             return `
                 <div class="stat-row">
-                    <div class="stat-name">${statNames[statKey] || statKey}</div>
+                    <div class="stat-name">${statNames[stat.stat.name] || stat.stat.name}</div>
                     <div class="stat-value-display">${stat.base_stat}</div>
                     <div class="stat-bar">
-                        <div class="stat-bar-fill ${statKey}" style="width: ${percentage}%"></div>
+                        <div class="stat-bar-fill ${stat.stat.name}" style="width: ${percentage}%"></div>
                     </div>
                 </div>
             `;
         }).join('');
-
-        // Add total stats
-        statsHTML += `
-            <div class="stat-row" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color);">
-                <div class="stat-name" style="font-weight: 600;">Total</div>
-                <div class="stat-value-display" style="font-weight: 600;">${totalStats}</div>
-                <div class="stat-bar">
-                    <div class="stat-bar-fill" style="width: ${(totalStats / 720) * 100}%; background: var(--primary-color);"></div>
-                </div>
-            </div>
-        `;
-
-        statsContainer.innerHTML = statsHTML;
     }
 
-    async populateMovesTab(pokemon) {
+    updateMovesTab(pokemon) {
         const movesContainer = document.getElementById('modal-pokemon-moves');
-        
-        if (pokemon.moves.length === 0) {
-            movesContainer.innerHTML = '<p>No moves data available.</p>';
-            return;
-        }
+        if (!movesContainer) return;
 
         // Group moves by learn method
-        const moveGroups = {
-            'level-up': { title: 'Level Up', moves: [] },
-            'machine': { title: 'TM/TR', moves: [] },
-            'egg': { title: 'Egg Moves', moves: [] },
-            'tutor': { title: 'Move Tutor', moves: [] }
+        const movesByMethod = {
+            'level-up': [],
+            'machine': [],
+            'egg': [],
+            'tutor': []
         };
 
-        pokemon.moves.forEach(moveInfo => {
-            moveInfo.version_group_details.forEach(detail => {
+        pokemon.moves.forEach(moveData => {
+            moveData.version_group_details.forEach(detail => {
                 const method = detail.move_learn_method.name;
-                if (moveGroups[method]) {
-                    const level = detail.level_learned_at || 0;
-                    moveGroups[method].moves.push({
-                        name: moveInfo.move.name,
-                        level: level
+                if (movesByMethod[method]) {
+                    movesByMethod[method].push({
+                        name: moveData.move.name,
+                        level: detail.level_learned_at
                     });
                 }
             });
         });
 
-        // Sort and render moves
         let movesHTML = '';
-        Object.values(moveGroups).forEach(group => {
-            if (group.moves.length > 0) {
-                // Remove duplicates and sort
-                const uniqueMoves = [...new Map(group.moves.map(m => [m.name, m])).values()];
+        Object.entries(movesByMethod).forEach(([method, moves]) => {
+            if (moves.length > 0) {
+                const methodName = method.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
                 
-                if (group.title === 'Level Up') {
-                    uniqueMoves.sort((a, b) => a.level - b.level);
+                // Sort moves appropriately
+                if (method === 'level-up') {
+                    moves.sort((a, b) => a.level - b.level);
                 } else {
-                    uniqueMoves.sort((a, b) => a.name.localeCompare(b.name));
+                    moves.sort((a, b) => a.name.localeCompare(b.name));
                 }
 
                 movesHTML += `
                     <div class="moves-section">
-                        <h4>${group.title}</h4>
+                        <h4>${methodName} (${moves.length})</h4>
                         <div class="moves-grid">
-                            ${uniqueMoves.map(move => `
-                                <div class="move-item">
-                                    ${group.title === 'Level Up' && move.level > 0 ? `Lv.${move.level} - ` : ''}
-                                    ${move.name.replace('-', ' ')}
-                                </div>
-                            `).join('')}
+                            ${moves.map(move => 
+                                `<div class="move-item">${move.name.replace('-', ' ')}${method === 'level-up' && move.level > 0 ? ` (Lv.${move.level})` : ''}</div>`
+                            ).join('')}
                         </div>
                     </div>
                 `;
             }
         });
 
-        movesContainer.innerHTML = movesHTML || '<p>No moves data available.</p>';
+        movesContainer.innerHTML = movesHTML || '<div class="moves-loading">No moves data available</div>';
     }
 
-    async populateEvolutionTab(pokemon) {
+    updateEvolutionTab(pokemon) {
         const evolutionContainer = document.getElementById('modal-pokemon-evolution');
-        
-        try {
-            const species = await window.pokemonAPI.getPokemonSpecies(pokemon.id);
-            const evolutionChainUrl = species.evolution_chain.url;
-            const evolutionId = evolutionChainUrl.split('/').slice(-2, -1)[0];
-            
-            const evolutionChain = await window.pokemonAPI.getEvolutionChain(evolutionId);
-            
-            const evolutionHTML = await this.buildEvolutionChain(evolutionChain.chain);
-            evolutionContainer.innerHTML = evolutionHTML;
-            
-            // Add click events to evolution Pokemon
-            evolutionContainer.querySelectorAll('.evolution-pokemon').forEach(el => {
-                el.addEventListener('click', async () => {
-                    const pokemonName = el.dataset.pokemon;
-                    if (pokemonName) {
-                        try {
-                            const evolutionPokemon = await window.pokemonAPI.getPokemon(pokemonName);
-                            this.openPokemonModal(evolutionPokemon);
-                        } catch (error) {
-                            console.error('Error loading evolution Pokemon:', error);
-                        }
-                    }
-                });
-            });
-            
-        } catch (error) {
-            console.error('Error loading evolution chain:', error);
-            evolutionContainer.innerHTML = '<p>Evolution data unavailable.</p>';
+        if (!evolutionContainer) return;
+
+        if (pokemon.evolutionChain) {
+            this.renderEvolutionChain(pokemon.evolutionChain, evolutionContainer);
+        } else {
+            evolutionContainer.innerHTML = '<div class="evolution-loading">No evolution data available</div>';
         }
     }
 
-    async buildEvolutionChain(chain) {
-        let html = '<div class="evolution-chain">';
-        let currentStage = chain;
+    renderEvolutionChain(evolutionChain, container) {
+        if (!evolutionChain || !evolutionChain.chain) {
+            container.innerHTML = '<div class="evolution-loading">No evolution chain available</div>';
+            return;
+        }
 
-        while (currentStage) {
-            // Get evolution details
-            const evolutionDetails = currentStage.evolution_details[0];
-            let levelRequirement = '';
-            
-            if (evolutionDetails) {
-                if (evolutionDetails.min_level) {
-                    levelRequirement = `Level ${evolutionDetails.min_level}`;
-                } else if (evolutionDetails.item) {
-                    levelRequirement = evolutionDetails.item.name.replace('-', ' ');
-                } else if (evolutionDetails.trigger) {
-                    levelRequirement = evolutionDetails.trigger.name.replace('-', ' ');
-                }
-            }
+        const chain = [];
+        let current = evolutionChain.chain;
 
-            // Get Pokemon data for sprite
-            try {
-                const pokemon = await window.pokemonAPI.getPokemon(currentStage.species.name);
-                html += `
-                    <div class="evolution-pokemon" data-pokemon="${currentStage.species.name}">
-                        <img src="${pokemon.sprites.front_default}" alt="${currentStage.species.name}">
-                        <div class="name">${currentStage.species.name}</div>
-                        ${levelRequirement ? `<div class="level">${levelRequirement}</div>` : ''}
-                    </div>
-                `;
-            } catch (error) {
-                html += `
-                    <div class="evolution-pokemon" data-pokemon="${currentStage.species.name}">
-                        <div class="name">${currentStage.species.name}</div>
-                        ${levelRequirement ? `<div class="level">${levelRequirement}</div>` : ''}
-                    </div>
-                `;
-            }
+        // Build linear chain
+        while (current) {
+            chain.push({
+                name: current.species.name,
+                id: current.species.url.split('/').slice(-2, -1)[0],
+                evolution_details: current.evolution_details[0] || null
+            });
 
-            if (currentStage.evolves_to.length > 0) {
-                const nextEvolution = currentStage.evolves_to[0];
-                const nextEvolutionDetails = nextEvolution.evolution_details[0];
-                let nextRequirement = '';
+            current = current.evolves_to[0] || null;
+        }
+
+        if (chain.length <= 1) {
+            container.innerHTML = '<div class="evolution-loading">This Pokémon does not evolve</div>';
+            return;
+        }
+
+        let chainHTML = '<div class="evolution-chain">';
+        
+        chain.forEach((pokemon, index) => {
+            // Pokemon card
+            chainHTML += `
+                <div class="evolution-pokemon" data-pokemon="${pokemon.name}">
+                    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png" alt="${pokemon.name}">
+                    <div class="name">${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}</div>
+                </div>
+            `;
+
+            // Arrow and requirement (except for last pokemon)
+            if (index < chain.length - 1) {
+                const nextPokemon = chain[index + 1];
+                let requirement = 'Unknown';
                 
-                if (nextEvolutionDetails) {
-                    if (nextEvolutionDetails.min_level) {
-                        nextRequirement = `Lv. ${nextEvolutionDetails.min_level}`;
-                    } else if (nextEvolutionDetails.item) {
-                        nextRequirement = nextEvolutionDetails.item.name.replace('-', ' ');
-                    } else if (nextEvolutionDetails.trigger && nextEvolutionDetails.trigger.name !== 'level-up') {
-                        nextRequirement = nextEvolutionDetails.trigger.name.replace('-', ' ');
+                if (nextPokemon.evolution_details) {
+                    const details = nextPokemon.evolution_details;
+                    if (details.min_level) {
+                        requirement = `Level ${details.min_level}`;
+                    } else if (details.item) {
+                        requirement = details.item.name.replace('-', ' ');
+                    } else if (details.trigger) {
+                        requirement = details.trigger.name.replace('-', ' ');
                     }
                 }
-                
-                html += `
+
+                chainHTML += `
                     <div class="evolution-arrow">
                         <i class="ri-arrow-right-line"></i>
-                        ${nextRequirement ? `<div class="evolution-requirement">${nextRequirement}</div>` : ''}
+                        <div class="evolution-requirement">${requirement}</div>
                     </div>
                 `;
-                currentStage = currentStage.evolves_to[0]; // Take first evolution path
-            } else {
-                break;
             }
-        }
+        });
 
-        html += '</div>';
-        return html || '<div class="evolution-chain"><p>No evolution data available.</p></div>';
-    }
+        chainHTML += '</div>';
+        container.innerHTML = chainHTML;
 
-    async populateFormsTab(pokemon) {
-        const formsContainer = document.getElementById('modal-pokemon-forms');
-        
-        try {
-            const species = await window.pokemonAPI.getPokemonSpecies(pokemon.id);
-            const varieties = species.varieties || [];
-            
-            if (varieties.length <= 1) {
-                formsContainer.innerHTML = `
-                    <div class="no-forms">
-                        <i class="ri-ghost-line"></i>
-                        <p>This Pokémon has no alternate forms.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let formsHTML = '<div class="forms-grid">';
-            
-            for (const variety of varieties) {
+        // Add click events to evolution pokemon
+        container.querySelectorAll('.evolution-pokemon').forEach(element => {
+            element.addEventListener('click', async () => {
+                const pokemonName = element.dataset.pokemon;
                 try {
-                    const formPokemon = await window.pokemonAPI.getPokemon(variety.pokemon.name);
-                    
-                    // Better form name parsing
-                    let formName = variety.pokemon.name;
-                    let displayName = 'Default Form';
-                    let formMethod = 'Standard';
-                    
-                    if (!variety.is_default) {
-                        // Remove base pokemon name and clean up
-                        formName = formName.replace(pokemon.name + '-', '').replace(pokemon.name, '');
-                        if (formName.startsWith('-')) formName = formName.substring(1);
-                        
-                        // Convert to display name
-                        displayName = formName.split('-').map(word => 
-                            word.charAt(0).toUpperCase() + word.slice(1)
-                        ).join(' ') || 'Alternate Form';
-                        
-                        // Determine form method
-                        const lowerFormName = formName.toLowerCase();
-                        if (lowerFormName.includes('mega')) {
-                            formMethod = 'Mega Evolution';
-                        } else if (lowerFormName.includes('alolan')) {
-                            formMethod = 'Regional Variant (Alola)';
-                        } else if (lowerFormName.includes('galarian')) {
-                            formMethod = 'Regional Variant (Galar)';
-                        } else if (lowerFormName.includes('hisuian')) {
-                            formMethod = 'Regional Variant (Hisui)';
-                        } else if (lowerFormName.includes('paldean')) {
-                            formMethod = 'Regional Variant (Paldea)';
-                        } else if (lowerFormName.includes('gigantamax')) {
-                            formMethod = 'Gigantamax';
-                        } else if (lowerFormName.includes('primal')) {
-                            formMethod = 'Primal Reversion';
-                        } else if (lowerFormName.includes('origin')) {
-                            formMethod = 'Origin Form';
-                        } else if (lowerFormName.includes('sky')) {
-                            formMethod = 'Sky Form';
-                        } else if (lowerFormName.includes('heat') || lowerFormName.includes('wash') || 
-                                 lowerFormName.includes('frost') || lowerFormName.includes('fan') || 
-                                 lowerFormName.includes('mow')) {
-                            formMethod = 'Rotom Form';
-                        } else {
-                            formMethod = 'Alternate Form';
-                        }
+                    const evolutionPokemon = await window.pokemonAPI.getCompletePokemonData(pokemonName);
+                    if (evolutionPokemon) {
+                        this.updateModalContent(evolutionPokemon);
                     }
-                    
-                    // Get type differences for forms
-                    const typeElements = formPokemon.types.map(typeInfo => 
-                        `<span class="type-badge ${typeInfo.type.name}">${typeInfo.type.name}</span>`
-                    ).join('');
-                    
-                    // Calculate stat differences
-                    const baseStats = pokemon.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
-                    const formStats = formPokemon.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
-                    const statDiff = formStats - baseStats;
-                    const statDiffText = statDiff > 0 ? `+${statDiff}` : statDiff < 0 ? `${statDiff}` : '±0';
-                    
-                    formsHTML += `
-                        <div class="form-item" data-pokemon="${variety.pokemon.name}">
-                            <div class="form-sprite-container">
-                                <img src="${formPokemon.sprites.front_default || pokemon.sprites.front_default}" alt="${displayName}">
-                            </div>
-                            <div class="form-info">
-                                <div class="form-name">${displayName}</div>
-                                <div class="form-method">${formMethod}</div>
-                                <div class="form-types">${typeElements}</div>
-                                <div class="form-stats">BST: ${formStats} (${statDiffText})</div>
-                            </div>
-                        </div>
-                    `;
                 } catch (error) {
-                    console.error(`Error loading form ${variety.pokemon.name}:`, error);
-                }
-            }
-            
-            formsHTML += '</div>';
-            formsContainer.innerHTML = formsHTML;
-            
-            // Add click events to form items
-            formsContainer.querySelectorAll('.form-item').forEach(item => {
-                item.addEventListener('click', async () => {
-                    const pokemonName = item.dataset.pokemon;
-                    if (pokemonName && pokemonName !== pokemon.name) {
-                        try {
-                            const formPokemon = await window.pokemonAPI.getPokemon(pokemonName);
-                            this.openPokemonModal(formPokemon);
-                        } catch (error) {
-                            console.error('Error loading form Pokemon:', error);
-                        }
-                    }
-                });
-            });
-            
-        } catch (error) {
-            console.error('Error loading Pokemon forms:', error);
-            formsContainer.innerHTML = `
-                <div class="no-forms">
-                    <i class="ri-error-warning-line"></i>
-                    <p>Unable to load form data.</p>
-                </div>
-            `;
-        }
-    }
-
-    async populateLocationsTab(pokemon) {
-        const locationsContainer = document.getElementById('modal-pokemon-locations');
-        
-        // Create tabs for different location views
-        locationsContainer.innerHTML = `
-            <div class="location-tabs">
-                <button class="location-tab-btn active" data-tab="encounters">Encounters</button>
-                <button class="location-tab-btn" data-tab="regions">All Regions</button>
-            </div>
-            <div class="location-tab-content" id="location-encounters">
-                <div class="locations-loading">Loading encounter data...</div>
-            </div>
-            <div class="location-tab-content" id="location-regions" style="display: none;">
-                <div class="locations-loading">Loading region data...</div>
-            </div>
-        `;
-        
-        // Setup location tab switching
-        const locationTabs = locationsContainer.querySelectorAll('.location-tab-btn');
-        const locationTabContents = locationsContainer.querySelectorAll('.location-tab-content');
-        
-        locationTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                locationTabs.forEach(t => t.classList.remove('active'));
-                locationTabContents.forEach(c => c.style.display = 'none');
-                
-                tab.classList.add('active');
-                const tabName = tab.dataset.tab;
-                document.getElementById(`location-${tabName}`).style.display = 'block';
-                
-                // Load content if not already loaded
-                if (tabName === 'regions' && !tab.dataset.loaded) {
-                    this.loadAllRegionsData();
-                    tab.dataset.loaded = 'true';
+                    console.error('Error loading evolution pokemon:', error);
                 }
             });
         });
-        
-        // Load encounter data first
-        await this.loadPokemonEncounters(pokemon);
     }
-    
-    async loadPokemonEncounters(pokemon) {
-        const encountersContainer = document.getElementById('location-encounters');
-        
-        try {
-            const encounters = await window.pokemonAPI.getPokemonEncounters(pokemon.id);
-            
-            if (!encounters || encounters.length === 0) {
-                encountersContainer.innerHTML = `
-                    <div class="no-locations">
-                        <i class="ri-map-pin-line"></i>
-                        <p>No location data available for this Pokémon.</p>
-                        <small>This Pokémon might be obtained through evolution, trading, or special events.</small>
-                    </div>
-                `;
-                return;
-            }
 
-            // Group encounters by location
-            const locationGroups = {};
-            
-            encounters.forEach(encounter => {
-                const locationName = encounter.location_area.name.replace('-', ' ');
-                const baseName = locationName.split(' area')[0].split(' zone')[0];
-                
-                if (!locationGroups[baseName]) {
-                    locationGroups[baseName] = [];
-                }
-                
-                locationGroups[baseName].push({
-                    area: locationName,
-                    fullData: encounter,
-                    methods: encounter.version_details.map(detail => ({
-                        version: detail.version.name,
-                        encounters: detail.encounter_details.map(enc => ({
-                            method: enc.method.name.replace('-', ' '),
-                            chance: enc.chance,
-                            minLevel: enc.min_level,
-                            maxLevel: enc.max_level
-                        }))
-                    }))
-                });
-            });
+    updateFormsTab(pokemon) {
+        const formsContainer = document.getElementById('modal-pokemon-forms');
+        if (!formsContainer) return;
 
-            let locationsHTML = '';
-            
-            Object.entries(locationGroups).forEach(([location, areas]) => {
-                locationsHTML += `
-                    <div class="location-section">
-                        <div class="location-header">${location}</div>
-                        <div class="location-areas">
-                `;
-                
-                areas.forEach(area => {
-                    // Get encounter details
-                    const encounterDetails = [];
-                    area.methods.forEach(method => {
-                        method.encounters.forEach(enc => {
-                            encounterDetails.push({
-                                method: enc.method,
-                                chance: enc.chance,
-                                minLevel: enc.minLevel,
-                                maxLevel: enc.maxLevel,
-                                version: method.version
-                            });
-                        });
-                    });
-                    
-                    // Group by method
-                    const methodGroups = {};
-                    encounterDetails.forEach(detail => {
-                        if (!methodGroups[detail.method]) {
-                            methodGroups[detail.method] = [];
-                        }
-                        methodGroups[detail.method].push(detail);
-                    });
-                    
-                    locationsHTML += `
-                        <div class="area-item">
-                            <div class="area-name">
-                                <i class="ri-map-2-line"></i>
-                                ${area.area.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                            </div>
-                            <div class="encounter-methods">
-                                ${Object.entries(methodGroups).map(([method, details]) => {
-                                    const levels = details.map(d => d.minLevel === d.maxLevel ? `Lv.${d.minLevel}` : `Lv.${d.minLevel}-${d.maxLevel}`);
-                                    const chances = details.map(d => `${d.chance}%`);
-                                    const uniqueLevels = [...new Set(levels)];
-                                    const uniqueChances = [...new Set(chances)];
-                                    
-                                    return `
-                                        <div class="encounter-method">
-                                            <span class="method-name">${method.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
-                                            <span class="method-details">
-                                                ${uniqueLevels.join(', ')} 
-                                                <span class="chance">(${uniqueChances.join(', ')})</span>
-                                            </span>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                locationsHTML += `
-                        </div>
-                    </div>
-                `;
-            });
-            
-            encountersContainer.innerHTML = locationsHTML || `
+        // For now, show basic form info
+        formsContainer.innerHTML = `
+            <div class="no-forms">
+                <i class="ri-shape-line"></i>
+                <p>Form variations not yet implemented</p>
+                <small>This feature will be added in a future update</small>
+            </div>
+        `;
+    }
+
+    updateLocationsTab(pokemon) {
+        const locationsContainer = document.getElementById('modal-pokemon-locations');
+        if (!locationsContainer) return;
+
+        if (pokemon.encounters && pokemon.encounters.length > 0) {
+            this.renderLocations(pokemon.encounters, locationsContainer);
+        } else {
+            locationsContainer.innerHTML = `
                 <div class="no-locations">
                     <i class="ri-map-pin-line"></i>
-                    <p>No location data available.</p>
-                </div>
-            `;
-            
-        } catch (error) {
-            console.error('Error loading Pokemon locations:', error);
-            encountersContainer.innerHTML = `
-                <div class="no-locations">
-                    <i class="ri-error-warning-line"></i>
-                    <p>Unable to load location data.</p>
-                </div>
-            `;
-        }
-    }
-    
-    async loadAllRegionsData() {
-        const regionsContainer = document.getElementById('location-regions');
-        
-        try {
-            regionsContainer.innerHTML = '<div class="locations-loading">Loading all regions...</div>';
-            
-            // Get all locations from API
-            const locationsResponse = await window.pokemonAPI.fetchData('https://pokeapi.co/api/v2/location?limit=1000');
-            
-            // Group locations by region (this is a simplified approach)
-            const regionGroups = {
-                'Kanto': [],
-                'Johto': [],
-                'Hoenn': [],
-                'Sinnoh': [],
-                'Unova': [],
-                'Kalos': [],
-                'Alola': [],
-                'Galar': [],
-                'Paldea': [],
-                'Other': []
-            };
-            
-            // Process locations and group them
-            for (const location of locationsResponse.results.slice(0, 100)) { // Limit for performance
-                try {
-                    const locationData = await window.pokemonAPI.fetchData(location.url);
-                    const locationName = locationData.name.replace('-', ' ');
-                    
-                    // Simple region detection based on location names
-                    let region = 'Other';
-                    if (locationName.includes('kanto') || ['cerulean', 'vermilion', 'celadon', 'fuchsia', 'saffron', 'cinnabar', 'viridian', 'pewter'].some(city => locationName.includes(city))) {
-                        region = 'Kanto';
-                    } else if (locationName.includes('johto') || ['violet', 'azalea', 'goldenrod', 'ecruteak', 'cianwood', 'olivine', 'mahogany', 'blackthorn'].some(city => locationName.includes(city))) {
-                        region = 'Johto';
-                    } else if (locationName.includes('hoenn') || ['petalburg', 'rustboro', 'dewford', 'slateport', 'mauville', 'verdanturf', 'fallarbor', 'lavaridge', 'fortree', 'lilycove', 'mossdeep', 'sootopolis', 'pacifidlog', 'ever-grande'].some(city => locationName.includes(city))) {
-                        region = 'Hoenn';
-                    } else if (locationName.includes('sinnoh') || ['twinleaf', 'sandgem', 'jubilife', 'oreburgh', 'floaroma', 'eterna', 'hearthome', 'solaceon', 'veilstone', 'pastoria', 'celestic', 'canalave', 'snowpoint', 'sunyshore'].some(city => locationName.includes(city))) {
-                        region = 'Sinnoh';
-                    } else if (locationName.includes('unova') || ['nuvema', 'accumula', 'striaton', 'nacrene', 'castelia', 'nimbasa', 'driftveil', 'mistralton', 'icirrus', 'opelucid', 'lacunosa', 'undella', 'black-city', 'white-forest'].some(city => locationName.includes(city))) {
-                        region = 'Unova';
-                    } else if (locationName.includes('kalos') || ['vaniville', 'aquacorde', 'santalune', 'lumiose', 'camphrier', 'cyllage', 'ambrette', 'shalour', 'coumarine', 'laverre', 'dendemille', 'anistar', 'couriway', 'snowbelle'].some(city => locationName.includes(city))) {
-                        region = 'Kalos';
-                    } else if (locationName.includes('alola') || ['iki', 'hau-oli', 'heahea', 'paniola', 'royal-avenue', 'konikoni', 'malie', 'tapu', 'po-town', 'seafolk'].some(city => locationName.includes(city))) {
-                        region = 'Alola';
-                    } else if (locationName.includes('galar') || ['postwick', 'wedgehurst', 'motostoke', 'turffield', 'hulbury', 'hammerlocke', 'stow-on-side', 'ballonlea', 'circhester', 'spikemuth', 'wyndon'].some(city => locationName.includes(city))) {
-                        region = 'Galar';
-                    } else if (locationName.includes('paldea') || ['cabo-poco', 'mesagoza', 'artazon', 'levincia', 'cascarrafa', 'medali', 'glaseado', 'montenevera', 'alfornada'].some(city => locationName.includes(city))) {
-                        region = 'Paldea';
-                    }
-                    
-                    regionGroups[region].push({
-                        name: locationName,
-                        areas: locationData.areas || [],
-                        id: locationData.id
-                    });
-                    
-                } catch (error) {
-                    console.error(`Error loading location ${location.name}:`, error);
-                }
-            }
-            
-            // Render regions
-            let regionsHTML = '<div class="regions-grid">';
-            
-            Object.entries(regionGroups).forEach(([regionName, locations]) => {
-                if (locations.length > 0) {
-                    regionsHTML += `
-                        <div class="region-section">
-                            <div class="region-header">
-                                <i class="ri-earth-line"></i>
-                                <h3>${regionName}</h3>
-                                <span class="location-count">${locations.length} locations</span>
-                            </div>
-                            <div class="region-locations">
-                                ${locations.slice(0, 10).map(location => `
-                                    <div class="region-location-item">
-                                        <div class="location-name">
-                                            <i class="ri-map-pin-line"></i>
-                                            ${location.name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                                        </div>
-                                        <div class="location-areas-count">
-                                            ${location.areas.length} areas
-                                        </div>
-                                    </div>
-                                `).join('')}
-                                ${locations.length > 10 ? `<div class="more-locations">+${locations.length - 10} more locations</div>` : ''}
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-            
-            regionsHTML += '</div>';
-            
-            regionsContainer.innerHTML = regionsHTML || `
-                <div class="no-locations">
-                    <i class="ri-map-line"></i>
-                    <p>Unable to load region data.</p>
-                </div>
-            `;
-            
-        } catch (error) {
-            console.error('Error loading regions data:', error);
-            regionsContainer.innerHTML = `
-                <div class="no-locations">
-                    <i class="ri-error-warning-line"></i>
-                    <p>Unable to load region data.</p>
+                    <p>No location data available</p>
+                    <small>This Pokémon may not be found in the wild</small>
                 </div>
             `;
         }
     }
 
-    setupModalControls(pokemon) {
-        // Modal close functionality
+    renderLocations(encounters, container) {
+        if (!encounters || encounters.length === 0) {
+            container.innerHTML = `
+                <div class="no-locations">
+                    <i class="ri-map-pin-line"></i>
+                    <p>No encounters found</p>
+                    <small>This Pokémon may not appear in the wild</small>
+                </div>
+            `;
+            return;
+        }
+
+        // Group encounters by location
+        const locationGroups = {};
+        encounters.forEach(encounter => {
+            const locationName = encounter.location_area.name;
+            if (!locationGroups[locationName]) {
+                locationGroups[locationName] = [];
+            }
+            locationGroups[locationName].push(encounter);
+        });
+
+        let locationsHTML = '<div class="regions-grid">';
+        
+        Object.entries(locationGroups).forEach(([locationName, locationEncounters]) => {
+            locationsHTML += `
+                <div class="region-section">
+                    <div class="region-header">
+                        <i class="ri-map-pin-line"></i>
+                        <h3>${locationName.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</h3>
+                        <div class="location-count">${locationEncounters.length} encounters</div>
+                    </div>
+                    <div class="region-locations">
+                        ${locationEncounters.map(encounter => `
+                            <div class="region-location-item">
+                                <div class="location-name">
+                                    <i class="ri-leaf-line"></i>
+                                    ${encounter.location_area.name.replace('-', ' ')}
+                                </div>
+                                <div class="location-areas-count">
+                                    ${encounter.version_details.length} versions
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        locationsHTML += '</div>';
+        container.innerHTML = locationsHTML;
+    }
+
+    setupModalEventListeners() {
+        // Close modal
         const closeModal = document.getElementById('close-modal');
         const modal = document.getElementById('pokemon-modal');
+        
+        if (closeModal) {
+            closeModal.onclick = () => {
+                modal.style.display = 'none';
+            };
+        }
 
-        const closeModalHandler = () => {
-            modal.style.display = 'none';
-        };
-
-        closeModal.onclick = closeModalHandler;
+        // Click outside to close
         modal.onclick = (e) => {
             if (e.target === modal) {
-                closeModalHandler();
+                modal.style.display = 'none';
             }
         };
 
         // Tab switching
-        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabBtns = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
 
-        tabButtons.forEach(btn => {
+        tabBtns.forEach(btn => {
             btn.onclick = () => {
-                // Remove active class from all tabs
-                tabButtons.forEach(b => b.classList.remove('active'));
-                tabContents.forEach(c => c.style.display = 'none');
-
-                // Activate clicked tab
+                const targetTab = btn.dataset.tab;
+                
+                // Update active tab button
+                tabBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                const tabName = btn.dataset.tab;
-                document.getElementById(`tab-${tabName}`).style.display = 'block';
+                
+                // Show target tab content
+                tabContents.forEach(content => {
+                    content.style.display = content.id === `tab-${targetTab}` ? 'block' : 'none';
+                });
             };
         });
 
-        // Sprite toggle controls
+        // Sprite controls in modal
         const toggleSpriteType = document.getElementById('toggle-sprite-type');
         const toggleSpriteStyle = document.getElementById('toggle-sprite-style');
-
-        let isShiny = false;
-        let isAnimated = false;
-
+        
         if (toggleSpriteType) {
-            toggleSpriteType.onclick = async () => {
-                isShiny = !isShiny;
+            toggleSpriteType.onclick = () => {
+                const isShiny = toggleSpriteType.textContent === 'Regular';
                 toggleSpriteType.textContent = isShiny ? 'Shiny' : 'Regular';
                 
-                const spriteElement = document.getElementById('modal-pokemon-sprite');
-                await window.spriteManager.updateSpriteElement(spriteElement, pokemon, { shiny: isShiny, animated: isAnimated });
+                const modalSprite = document.getElementById('modal-pokemon-sprite');
+                if (modalSprite && window.spriteManager && modal.currentPokemon) {
+                    window.spriteManager.updateSpriteElement(modalSprite, modal.currentPokemon, { shiny: isShiny });
+                }
             };
         }
 
         if (toggleSpriteStyle) {
-            toggleSpriteStyle.onclick = async () => {
-                isAnimated = !isAnimated;
+            toggleSpriteStyle.onclick = () => {
+                const isAnimated = toggleSpriteStyle.textContent === 'Static';
                 toggleSpriteStyle.textContent = isAnimated ? 'Animated' : 'Static';
                 
-                const spriteElement = document.getElementById('modal-pokemon-sprite');
-                await window.spriteManager.updateSpriteElement(spriteElement, pokemon, { shiny: isShiny, animated: isAnimated });
+                const modalSprite = document.getElementById('modal-pokemon-sprite');
+                if (modalSprite && window.spriteManager && modal.currentPokemon) {
+                    window.spriteManager.updateSpriteElement(modalSprite, modal.currentPokemon, { animated: isAnimated });
+                }
+            };
+        }
+    }
+
+    async showCacheManagement() {
+        const cacheModal = document.getElementById('cache-modal');
+        if (!cacheModal) return;
+
+        cacheModal.style.display = 'block';
+
+        // Load cache stats
+        const cacheStats = document.getElementById('cache-stats');
+        const cacheActions = document.getElementById('cache-actions');
+
+        try {
+            const stats = await window.pokemonAPI.getCacheStats();
+            
+            if (stats) {
+                cacheStats.innerHTML = this.renderCacheStats(stats);
+                cacheActions.style.display = 'block';
+                this.setupCacheActions();
+            } else {
+                cacheStats.innerHTML = `
+                    <div class="cache-error">
+                        <i class="ri-error-warning-line"></i>
+                        <p>Unable to load cache statistics</p>
+                        <small>Cache management may not be available</small>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading cache stats:', error);
+            cacheStats.innerHTML = `
+                <div class="cache-error">
+                    <i class="ri-error-warning-line"></i>
+                    <p>Error loading cache data</p>
+                    <small>${error.message}</small>
+                </div>
+            `;
+        }
+
+        // Setup close button
+        const closeCacheModal = document.getElementById('close-cache-modal');
+        if (closeCacheModal) {
+            closeCacheModal.onclick = () => {
+                cacheModal.style.display = 'none';
             };
         }
 
-        // Escape key to close modal
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && modal.style.display !== 'none') {
-                closeModalHandler();
+        // Click outside to close
+        cacheModal.onclick = (e) => {
+            if (e.target === cacheModal) {
+                cacheModal.style.display = 'none';
             }
-        });
-    }
-
-    clearAllFilters() {
-        // Reset filters
-        this.currentFilters = {
-            search: '',
-            generation: '',
-            types: [],
-            sort: 'id'
         };
-
-        // Reset UI elements
-        const searchInput = document.getElementById('search-input');
-        const generationFilter = document.getElementById('generation-filter');
-        const sortFilter = document.getElementById('sort-filter');
-        const typeFilters = document.querySelectorAll('.type-filter');
-
-        if (searchInput) searchInput.value = '';
-        if (generationFilter) generationFilter.value = '';
-        if (sortFilter) sortFilter.value = 'id';
-        
-        typeFilters.forEach(filter => {
-            filter.classList.remove('active');
-        });
-
-        // Apply filters
-        this.applyFilters();
     }
 
-    getResultsCount() {
-        return this.filteredPokemon.length;
+    renderCacheStats(stats) {
+        const formatBytes = window.pokemonAPI.formatBytes.bind(window.pokemonAPI);
+        
+        return `
+            <div class="cache-overview">
+                <div class="cache-stat-card">
+                    <div class="cache-stat-header">
+                        <i class="ri-database-2-line"></i>
+                        <h3>Total Cache</h3>
+                    </div>
+                    <div class="cache-stat-value">
+                        <div class="size">${formatBytes(stats.total.size)}</div>
+                        <div class="files">${stats.total.files} files</div>
+                    </div>
+                </div>
+                
+                <div class="cache-breakdown">
+                    <div class="cache-item">
+                        <div class="cache-item-info">
+                            <i class="ri-database-line"></i>
+                            <span>Pokemon Data</span>
+                        </div>
+                        <div class="cache-item-stats">
+                            <div class="size">${formatBytes(stats.data.size)}</div>
+                            <div class="files">${stats.data.files} files</div>
+                        </div>
+                    </div>
+                    
+                    <div class="cache-item">
+                        <div class="cache-item-info">
+                            <i class="ri-image-line"></i>
+                            <span>Sprites</span>
+                        </div>
+                        <div class="cache-item-stats">
+                            <div class="size">${formatBytes(stats.sprites.size)}</div>
+                            <div class="files">${stats.sprites.files} files</div>
+                        </div>
+                    </div>
+                    
+                    <div class="cache-item">
+                        <div class="cache-item-info">
+                            <i class="ri-volume-up-line"></i>
+                            <span>Audio</span>
+                        </div>
+                        <div class="cache-item-stats">
+                            <div class="size">${formatBytes(stats.audio.size)}</div>
+                            <div class="files">${stats.audio.files} files</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cache-performance">
+                    <h4>Performance Statistics</h4>
+                    <div class="performance-stats">
+                        <div class="perf-stat">
+                            <span class="label">Cache Hits</span>
+                            <span class="value success">${stats.performance.hits}</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="label">Cache Misses</span>
+                            <span class="value warning">${stats.performance.misses}</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="label">Errors</span>
+                            <span class="value error">${stats.performance.errors}</span>
+                        </div>
+                        <div class="perf-stat">
+                            <span class="label">Hit Rate</span>
+                            <span class="value">${((stats.performance.hits / (stats.performance.hits + stats.performance.misses)) * 100 || 0).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    setupCacheActions() {
+        const clearDataCache = document.getElementById('clear-data-cache');
+        const clearSpriteCache = document.getElementById('clear-sprite-cache');
+        const clearAudioCache = document.getElementById('clear-audio-cache');
+        const clearAllCache = document.getElementById('clear-all-cache');
+
+        if (clearDataCache) {
+            clearDataCache.onclick = async () => {
+                if (confirm('Clear Pokemon data cache? You will need to re-download Pokemon information.')) {
+                    await window.darkdexApp.clearCache('data');
+                    location.reload();
+                }
+            };
+        }
+
+        if (clearSpriteCache) {
+            clearSpriteCache.onclick = async () => {
+                if (confirm('Clear sprite cache? You will need to re-download Pokemon images.')) {
+                    await window.darkdexApp.clearCache('sprites');
+                    location.reload();
+                }
+            };
+        }
+
+        if (clearAudioCache) {
+            clearAudioCache.onclick = async () => {
+                if (confirm('Clear audio cache? You will need to re-download sound files.')) {
+                    await window.darkdexApp.clearCache('audio');
+                }
+            };
+        }
+
+        if (clearAllCache) {
+            clearAllCache.onclick = async () => {
+                if (confirm('Clear ALL cache? This will remove all downloaded data and require a complete re-download.')) {
+                    await window.darkdexApp.clearCache('all');
+                    location.reload();
+                }
+            };
+        }
     }
 }
 
