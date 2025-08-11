@@ -96,6 +96,27 @@ class SearchManager {
                 this.showCacheManagement();
             });
         }
+
+        // Retry failed downloads button
+        const retryFailed = document.getElementById('retry-failed');
+        if (retryFailed) {
+            retryFailed.addEventListener('click', () => {
+                if (window.darkdexApp) {
+                    window.darkdexApp.showRetryModal();
+                }
+            });
+        }
+
+        // Play Pokemon cry button
+        const playPokemonCry = document.getElementById('play-pokemon-cry');
+        if (playPokemonCry) {
+            playPokemonCry.addEventListener('click', () => {
+                const modal = document.getElementById('pokemon-modal');
+                if (modal && modal.currentPokemon && window.audioManager) {
+                    window.audioManager.playPokemonCry(modal.currentPokemon.id);
+                }
+            });
+        }
     }
 
     applyFilters() {
