@@ -324,13 +324,8 @@ class SearchManager {
         // Update abilities
         const abilitiesContainer = document.getElementById('modal-pokemon-abilities');
         if (abilitiesContainer) {
-            abilitiesContainer.innerHTML = `
-                <div>
-                    ${pokemon.abilities.map(ability => 
-                        `<span class="ability-item ${ability.is_hidden ? 'hidden' : ''}">${ability.ability.name.replace('-', ' ')}</span>`
-                    ).join('')}
-                </div>
-            `;
+            // Load detailed abilities
+            this.updateAbilitiesWithDetails(pokemon);
         }
 
         // Update description
@@ -378,6 +373,59 @@ class SearchManager {
         }).join('');
     }
 
+    async updateAbilitiesWithDetails(pokemon) {
+        const abilitiesContainer = document.getElementById('modal-pokemon-abilities');
+        if (!abilitiesContainer || !pokemon.abilities) return;
+
+        let abilitiesHTML = '<div class="abilities-detailed">';
+        
+        for (const abilityData of pokemon.abilities) {
+            try {
+                const abilityDetails = await window.pokemonAPI.getAbility(abilityData.ability.name);
+                const description = this.getAbilityDescription(abilityDetails);
+                const generation = abilityDetails.generation ? abilityDetails.generation.name.replace('-', ' ').toUpperCase() : 'Unknown';
+                
+                abilitiesHTML += `
+                    <div class="ability-detailed ${abilityData.is_hidden ? 'hidden' : ''}">
+                        <div class="ability-header">
+                            <span class="ability-name">${abilityData.ability.name.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                            ${abilityData.is_hidden ? '<span class="hidden-badge">Hidden</span>' : ''}
+                            <span class="ability-generation">${generation}</span>
+                        </div>
+                        <div class="ability-description">${description}</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error(`Error loading ability ${abilityData.ability.name}:`, error);
+                abilitiesHTML += `
+                    <div class="ability-detailed ${abilityData.is_hidden ? 'hidden' : ''}">
+                        <div class="ability-header">
+                            <span class="ability-name">${abilityData.ability.name.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                            ${abilityData.is_hidden ? '<span class="hidden-badge">Hidden</span>' : ''}
+                        </div>
+                        <div class="ability-description">Description unavailable</div>
+                    </div>
+                `;
+            }
+        }
+        
+        abilitiesHTML += '</div>';
+        abilitiesContainer.innerHTML = abilitiesHTML;
+    }
+
+    getAbilityDescription(abilityDetails) {
+        if (!abilityDetails || !abilityDetails.effect_entries) {
+            return 'No description available.';
+        }
+        
+        const englishEffect = abilityDetails.effect_entries.find(entry => entry.language.name === 'en');
+        if (englishEffect) {
+            return englishEffect.effect || englishEffect.short_effect || 'No description available.';
+        }
+        
+        return 'No description available.';
+    }
+
     updateMovesTab(pokemon) {
         const movesContainer = document.getElementById('modal-pokemon-moves');
         if (!movesContainer) return;
@@ -396,7 +444,8 @@ class SearchManager {
                 if (movesByMethod[method]) {
                     movesByMethod[method].push({
                         name: moveData.move.name,
-                        level: detail.level_learned_at
+                        level: detail.level_learned_at,
+                        url: moveData.move.url
                     });
                 }
             });
@@ -419,7 +468,13 @@ class SearchManager {
                         <h4>${methodName} (${moves.length})</h4>
                         <div class="moves-grid">
                             ${moves.map(move => 
-                                `<div class="move-item">${move.name.replace('-', ' ')}${method === 'level-up' && move.level > 0 ? ` (Lv.${move.level})` : ''}</div>`
+                                `<div class="move-item" data-move-url="${move.url}" data-move-name="${move.name}">
+                                    <div class="move-name">${move.name.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                                    ${method === 'level-up' && move.level > 0 ? `<div class="move-level">Lv.${move.level}</div>` : ''}
+                                    <div class="move-details-btn">
+                                        <i class="ri-information-line"></i>
+                                    </div>
+                                </div>`
                             ).join('')}
                         </div>
                     </div>
@@ -428,6 +483,131 @@ class SearchManager {
         });
 
         movesContainer.innerHTML = movesHTML || '<div class="moves-loading">No moves data available</div>';
+        
+        // Add click events to move items for details
+        movesContainer.querySelectorAll('.move-item').forEach(moveElement => {
+            moveElement.addEventListener('click', async () => {
+                const moveUrl = moveElement.dataset.moveUrl;
+                const moveName = moveElement.dataset.moveName;
+                
+                if (moveUrl) {
+                    await this.showMoveDetails(moveName, moveUrl, moveElement);
+                }
+            });
+        });
+    }
+
+    async showMoveDetails(moveName, moveUrl, moveElement) {
+        try {
+            // Show loading state
+            const originalContent = moveElement.innerHTML;
+            moveElement.innerHTML = `
+                <div class="move-loading">
+                    <i class="ri-loader-4-line"></i>
+                    Loading...
+                </div>
+            `;
+            
+            const moveDetails = await window.pokemonAPI.getMoveDetails(moveName);
+            
+            if (moveDetails) {
+                const description = this.getMoveDescription(moveDetails);
+                const type = moveDetails.type ? moveDetails.type.name : 'unknown';
+                const power = moveDetails.power || '--';
+                const accuracy = moveDetails.accuracy || '--';
+                const pp = moveDetails.pp || '--';
+                const damageClass = moveDetails.damage_class ? moveDetails.damage_class.name : 'unknown';
+                const generation = moveDetails.generation ? moveDetails.generation.name.replace('-', ' ').toUpperCase() : 'Unknown';
+                
+                // Create modal for move details
+                const moveModal = document.createElement('div');
+                moveModal.className = 'move-details-modal';
+                moveModal.innerHTML = `
+                    <div class="move-details-content">
+                        <div class="move-details-header">
+                            <h3>${moveName.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</h3>
+                            <button class="close-move-details">
+                                <i class="ri-close-line"></i>
+                            </button>
+                        </div>
+                        <div class="move-details-body">
+                            <div class="move-stats">
+                                <div class="move-stat">
+                                    <span class="stat-label">Type</span>
+                                    <span class="type-badge ${type}">${type}</span>
+                                </div>
+                                <div class="move-stat">
+                                    <span class="stat-label">Category</span>
+                                    <span class="stat-value">${damageClass.replace(/\b\w/g, l => l.toUpperCase())}</span>
+                                </div>
+                                <div class="move-stat">
+                                    <span class="stat-label">Power</span>
+                                    <span class="stat-value">${power}</span>
+                                </div>
+                                <div class="move-stat">
+                                    <span class="stat-label">Accuracy</span>
+                                    <span class="stat-value">${accuracy}${accuracy !== '--' ? '%' : ''}</span>
+                                </div>
+                                <div class="move-stat">
+                                    <span class="stat-label">PP</span>
+                                    <span class="stat-value">${pp}</span>
+                                </div>
+                                <div class="move-stat">
+                                    <span class="stat-label">Generation</span>
+                                    <span class="stat-value">${generation}</span>
+                                </div>
+                            </div>
+                            <div class="move-description">
+                                <h4>Description</h4>
+                                <p>${description}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(moveModal);
+                
+                // Add close event
+                const closeBtn = moveModal.querySelector('.close-move-details');
+                const closeModal = () => {
+                    document.body.removeChild(moveModal);
+                };
+                
+                closeBtn.addEventListener('click', closeModal);
+                moveModal.addEventListener('click', (e) => {
+                    if (e.target === moveModal) closeModal();
+                });
+                
+                // Restore original content
+                moveElement.innerHTML = originalContent;
+            } else {
+                moveElement.innerHTML = originalContent;
+            }
+        } catch (error) {
+            console.error(`Error loading move details for ${moveName}:`, error);
+            moveElement.innerHTML = originalContent;
+        }
+    }
+
+    getMoveDescription(moveDetails) {
+        if (!moveDetails || !moveDetails.effect_entries) {
+            return 'No description available.';
+        }
+        
+        const englishEffect = moveDetails.effect_entries.find(entry => entry.language.name === 'en');
+        if (englishEffect) {
+            return englishEffect.effect || englishEffect.short_effect || 'No description available.';
+        }
+        
+        // Try flavor text as fallback
+        if (moveDetails.flavor_text_entries) {
+            const englishFlavor = moveDetails.flavor_text_entries.find(entry => entry.language.name === 'en');
+            if (englishFlavor) {
+                return englishFlavor.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+            }
+        }
+        
+        return 'No description available.';
     }
 
     updateEvolutionTab(pokemon) {
@@ -525,14 +705,120 @@ class SearchManager {
         const formsContainer = document.getElementById('modal-pokemon-forms');
         if (!formsContainer) return;
 
-        // For now, show basic form info
-        formsContainer.innerHTML = `
-            <div class="no-forms">
-                <i class="ri-shape-line"></i>
-                <p>Form variations not yet implemented</p>
-                <small>This feature will be added in a future update</small>
-            </div>
-        `;
+        if (!pokemon.forms || pokemon.forms.length <= 1) {
+            formsContainer.innerHTML = `
+                <div class="no-forms">
+                    <i class="ri-shape-line"></i>
+                    <p>No alternate forms available</p>
+                    <small>This Pokémon only has its base form</small>
+                </div>
+            `;
+            return;
+        }
+
+        // Render forms
+        let formsHTML = '<div class="forms-grid">';
+        
+        pokemon.forms.forEach(form => {
+            const formName = form.form_name || form.name || 'Unknown Form';
+            const isDefault = form.is_default || false;
+            const isMega = formName.toLowerCase().includes('mega');
+            const isGmax = formName.toLowerCase().includes('gmax') || formName.toLowerCase().includes('gigantamax');
+            const isAlolan = formName.toLowerCase().includes('alola');
+            const isGalarian = formName.toLowerCase().includes('galar');
+            const isPaldean = formName.toLowerCase().includes('paldea');
+            const isHisuian = formName.toLowerCase().includes('hisui');
+            
+            let formType = 'Alternate Form';
+            if (isMega) formType = 'Mega Evolution';
+            else if (isGmax) formType = 'Gigantamax Form';
+            else if (isAlolan) formType = 'Alolan Form';
+            else if (isGalarian) formType = 'Galarian Form';
+            else if (isPaldean) formType = 'Paldean Form';
+            else if (isHisuian) formType = 'Hisuian Form';
+            else if (isDefault) formType = 'Base Form';
+            
+            // Get sprite URL for form
+            let spriteUrl = '';
+            if (form.sprites) {
+                spriteUrl = form.sprites.front_default || 
+                           form.sprites.front_shiny || 
+                           pokemon.sprites.front_default;
+            } else {
+                // Try to construct sprite URL based on form name
+                const pokemonId = pokemon.id;
+                if (isMega) {
+                    spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pokemonId}-mega.gif`;
+                } else if (isAlolan) {
+                    spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pokemonId}-alola.gif`;
+                } else if (isGalarian) {
+                    spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pokemonId}-galar.gif`;
+                } else {
+                    spriteUrl = pokemon.sprites.front_default;
+                }
+            }
+            
+            // Get types for this form
+            let formTypes = '';
+            if (form.types && form.types.length > 0) {
+                formTypes = form.types.map(type => 
+                    `<span class="type-badge ${type.type.name}">${type.type.name}</span>`
+                ).join('');
+            } else if (pokemon.types) {
+                formTypes = pokemon.types.map(type => 
+                    `<span class="type-badge ${type.type.name}">${type.type.name}</span>`
+                ).join('');
+            }
+            
+            // Calculate stats if available
+            let statsInfo = '';
+            if (form.stats && form.stats.length > 0) {
+                const baseStatTotal = form.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
+                statsInfo = `BST: ${baseStatTotal}`;
+            } else if (pokemon.stats) {
+                const baseStatTotal = pokemon.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
+                statsInfo = `BST: ${baseStatTotal}`;
+            }
+            
+            formsHTML += `
+                <div class="form-item ${isDefault ? 'default-form' : ''}" data-form="${form.name}">
+                    <div class="form-sprite-container">
+                        <img src="${spriteUrl}" alt="${formName}" onerror="this.src='${pokemon.sprites.front_default}'">
+                    </div>
+                    <div class="form-info">
+                        <div class="form-name">${formName.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                        <div class="form-method">${formType}</div>
+                        <div class="form-types">${formTypes}</div>
+                        ${statsInfo ? `<div class="form-stats">${statsInfo}</div>` : ''}
+                        ${form.version_group ? `<div class="form-version">Since: ${form.version_group.name.replace('-', ' ')}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        formsHTML += '</div>';
+        formsContainer.innerHTML = formsHTML;
+        
+        // Add click events to form items
+        formsContainer.querySelectorAll('.form-item').forEach(element => {
+            element.addEventListener('click', () => {
+                const formName = element.dataset.form;
+                const form = pokemon.forms.find(f => f.name === formName);
+                if (form) {
+                    // Update modal sprite to show this form
+                    const modalSprite = document.getElementById('modal-pokemon-sprite');
+                    if (modalSprite && form.sprites && form.sprites.front_default) {
+                        modalSprite.src = form.sprites.front_default;
+                    }
+                    
+                    // Highlight selected form
+                    formsContainer.querySelectorAll('.form-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    element.classList.add('selected');
+                }
+            });
+        });
     }
 
     updateLocationsTab(pokemon) {
@@ -577,6 +863,23 @@ class SearchManager {
         let locationsHTML = '<div class="regions-grid">';
         
         Object.entries(locationGroups).forEach(([locationName, locationEncounters]) => {
+            // Group version details by method and version
+            const methodGroups = {};
+            locationEncounters.forEach(encounter => {
+                encounter.version_details.forEach(versionDetail => {
+                    const method = versionDetail.encounter_details[0]?.method?.name || 'unknown';
+                    const version = versionDetail.version.name;
+                    
+                    if (!methodGroups[method]) {
+                        methodGroups[method] = {};
+                    }
+                    if (!methodGroups[method][version]) {
+                        methodGroups[method][version] = [];
+                    }
+                    methodGroups[method][version].push(...versionDetail.encounter_details);
+                });
+            });
+            
             locationsHTML += `
                 <div class="region-section">
                     <div class="region-header">
@@ -585,14 +888,28 @@ class SearchManager {
                         <div class="location-count">${locationEncounters.length} encounters</div>
                     </div>
                     <div class="region-locations">
-                        ${locationEncounters.map(encounter => `
-                            <div class="region-location-item">
-                                <div class="location-name">
-                                    <i class="ri-leaf-line"></i>
-                                    ${encounter.location_area.name.replace('-', ' ')}
+                        ${Object.entries(methodGroups).map(([method, versions]) => `
+                            <div class="encounter-method-group">
+                                <div class="method-header">
+                                    <i class="ri-search-line"></i>
+                                    <span class="method-name">${method.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                                 </div>
-                                <div class="location-areas-count">
-                                    ${encounter.version_details.length} versions
+                                <div class="version-details">
+                                    ${Object.entries(versions).map(([version, details]) => {
+                                        const minLevel = Math.min(...details.map(d => d.min_level || 0));
+                                        const maxLevel = Math.max(...details.map(d => d.max_level || 0));
+                                        const chance = Math.max(...details.map(d => d.chance || 0));
+                                        
+                                        return `
+                                            <div class="version-encounter">
+                                                <div class="version-info">
+                                                    <span class="version-name">${version.replace('-', ' ').toUpperCase()}</span>
+                                                    ${minLevel > 0 ? `<span class="level-range">Lv. ${minLevel}${maxLevel !== minLevel ? `-${maxLevel}` : ''}</span>` : ''}
+                                                </div>
+                                                ${chance > 0 ? `<div class="encounter-chance">${chance}%</div>` : ''}
+                                            </div>
+                                        `;
+                                    }).join('')}
                                 </div>
                             </div>
                         `).join('')}
