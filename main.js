@@ -84,12 +84,14 @@ ipcMain.handle('get-cached-data', async (event, key) => {
     const filePath = path.join(cacheDir, `${key}.json`);
     
     if (fs.existsSync(filePath)) {
-      const data = fs.readFileSync(filePath, 'utf8');
+      // Use async read for better performance
+      const data = await fs.promises.readFile(filePath, 'utf8');
       return { success: true, data: JSON.parse(data) };
     } else {
       return { success: false, error: 'Cache not found' };
     }
   } catch (error) {
+    console.error(`Cache read failed for ${key}:`, error.message);
     return { success: false, error: error.message };
   }
 });

@@ -367,8 +367,8 @@ class DarkDexApp {
         try {
             const cachedPokemon = [];
             
-            // Try to load individual cached Pokemon
-            for (let i = 1; i <= 151; i++) { // Start with Gen 1 as fallback
+            // Try to load individual cached Pokemon - more comprehensive search
+            for (let i = 1; i <= 2000; i++) {
                 try {
                     const cached = await window.pokemonAPI.fetchData(null, `complete_pokemon_${i}`);
                     if (cached) {
@@ -378,8 +378,19 @@ class DarkDexApp {
                     // Skip missing cache entries
                     continue;
                 }
+                
+                // Update loading status periodically
+                if (i % 100 === 0) {
+                    this.updateLoadingStatus(`Checking cache... found ${cachedPokemon.length} Pokemon so far`);
+                }
+                
+                // Break if we haven't found any Pokemon in the last 200 IDs
+                if (i > 300 && cachedPokemon.length === 0) {
+                    break;
+                }
             }
             
+            console.log(`Loaded ${cachedPokemon.length} Pokemon from partial cache`);
             return cachedPokemon;
         } catch (error) {
             console.error('Error loading partial cached data:', error);

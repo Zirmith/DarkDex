@@ -281,6 +281,36 @@ class PokemonAPI {
         }
     }
 
+    async loadPartialCachedData() {
+        try {
+            const cachedPokemon = [];
+            
+            // Try to load individual cached Pokemon - check more extensively
+            for (let i = 1; i <= 2000; i++) { // Check up to 2000 to catch any future Pokemon
+                try {
+                    const cached = await window.pokemonAPI.fetchData(null, `complete_pokemon_${i}`);
+                    if (cached) {
+                        cachedPokemon.push(cached);
+                    }
+                } catch (error) {
+                    // Skip missing cache entries
+                    continue;
+                }
+                
+                // Break if we haven't found any Pokemon in the last 100 IDs
+                if (i > 200 && cachedPokemon.length === 0) {
+                    break;
+                }
+            }
+            
+            console.log(`Found ${cachedPokemon.length} cached Pokemon as fallback`);
+            return cachedPokemon;
+        } catch (error) {
+            console.error('Error loading partial cached data:', error);
+            return [];
+        }
+    }
+
     async getPokemonDescription(species) {
         try {
             if (!species || !species.flavor_text_entries) {
