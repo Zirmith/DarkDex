@@ -102,6 +102,8 @@ class PokemonAPI {
                 }
                 const data = await response.json();
                 this.cache.set(key, data);
+                // Also cache locally if possible
+                await this.cacheData(key, data);
                 this.cacheStats.misses++;
                 return data;
             }
@@ -126,7 +128,8 @@ class PokemonAPI {
     }
 
     async getPokemonList(limit = 1010, offset = 0) {
-        const url = `${this.baseUrl}/pokemon?limit=${limit}&offset=${offset}`;
+        // Get all Pokemon without limit
+        const url = `${this.baseUrl}/pokemon?limit=100000&offset=${offset}`;
         return await this.fetchData(url, `pokemon_list_${limit}_${offset}`);
     }
 
@@ -171,6 +174,7 @@ class PokemonAPI {
     }
 
     async getAllPokemon(maxPokemon = 1010) {
+        // Remove the limit - get all available Pokemon
         try {
             // Try to get cached complete Pokemon data first
             const cachedAllPokemon = await this.getCachedAllPokemon();
@@ -179,19 +183,22 @@ class PokemonAPI {
                 return cachedAllPokemon;
             }
 
-            const pokemonList = await this.getPokemonList(maxPokemon, 0);
+            // Get all Pokemon without limit
+            const pokemonList = await this.getPokemonList(100000, 0);
             if (!pokemonList) {
                 throw new Error('Could not fetch Pokemon list');
             }
             
+            console.log(`Found ${pokemonList.results.length} total Pokemon available`);
             const detailedPokemon = [];
 
             // Process in batches to avoid overwhelming the API
-            const batchSize = 20;
+            const batchSize = 50; // Increase batch size for better performance
             for (let i = 0; i < pokemonList.results.length; i += batchSize) {
                 const batch = pokemonList.results.slice(i, i + batchSize);
                 const batchPromises = batch.map(async (pokemon) => {
                     try {
+                        // Cache individual Pokemon data
                         const details = await this.getPokemon(pokemon.name);
                         if (!details) return null;
                         
@@ -208,12 +215,18 @@ class PokemonAPI {
                             evolutionChain = await this.getEvolutionChain(evolutionId).catch(() => null);
                         }
                         
-                        return { 
+                        const completeData = { 
                             ...details, 
                             species, 
                             encounters: encounters || [],
                             evolutionChain
                         };
+                        
+                        // Cache individual complete Pokemon data
+                        await this.cacheData(`complete_pokemon_${pokemon.name}`, completeData);
+                        await this.cacheData(`complete_pokemon_${details.id}`, completeData);
+                        
+                        return completeData;
                     } catch (error) {
                         console.error(`Error fetching ${pokemon.name}:`, error);
                         return null;
@@ -223,15 +236,19 @@ class PokemonAPI {
                 const batchResults = await Promise.all(batchPromises);
                 detailedPokemon.push(...batchResults.filter(p => p !== null));
 
+                // Log progress
+                console.log(`Loaded ${detailedPokemon.length}/${pokemonList.results.length} Pokemon...`);
+
                 // Small delay between batches to be respectful to the API
                 if (i + batchSize < pokemonList.results.length) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    await new Promise(resolve => setTimeout(resolve, 50)); // Reduce delay slightly
                 }
             }
 
             // Cache the complete Pokemon data
             await this.cacheAllPokemon(detailedPokemon);
             
+            console.log(`Successfully loaded and cached ${detailedPokemon.length} Pokemon`);
             return detailedPokemon;
         } catch (error) {
             console.error('Error fetching all Pokemon:', error);
