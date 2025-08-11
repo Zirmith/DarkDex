@@ -705,7 +705,11 @@ class SearchManager {
         const formsContainer = document.getElementById('modal-pokemon-forms');
         if (!formsContainer) return;
 
-        if (!pokemon.forms || pokemon.forms.length <= 1) {
+        // Check if Pokemon has multiple forms or special forms
+        const hasMultipleForms = pokemon.forms && pokemon.forms.length > 1;
+        const hasSpecialForms = this.hasSpecialForms(pokemon);
+        
+        if (!hasMultipleForms && !hasSpecialForms) {
             formsContainer.innerHTML = `
                 <div class="no-forms">
                     <i class="ri-shape-line"></i>
@@ -716,81 +720,33 @@ class SearchManager {
             return;
         }
 
-        // Render forms
+        // Get all available forms including special ones
+        const allForms = this.getAllPokemonForms(pokemon);
+        
         let formsHTML = '<div class="forms-grid">';
         
-        pokemon.forms.forEach(form => {
-            const formName = form.form_name || form.name || 'Unknown Form';
-            const isDefault = form.is_default || false;
-            const isMega = formName.toLowerCase().includes('mega');
-            const isGmax = formName.toLowerCase().includes('gmax') || formName.toLowerCase().includes('gigantamax');
-            const isAlolan = formName.toLowerCase().includes('alola');
-            const isGalarian = formName.toLowerCase().includes('galar');
-            const isPaldean = formName.toLowerCase().includes('paldea');
-            const isHisuian = formName.toLowerCase().includes('hisui');
-            
-            let formType = 'Alternate Form';
-            if (isMega) formType = 'Mega Evolution';
-            else if (isGmax) formType = 'Gigantamax Form';
-            else if (isAlolan) formType = 'Alolan Form';
-            else if (isGalarian) formType = 'Galarian Form';
-            else if (isPaldean) formType = 'Paldean Form';
-            else if (isHisuian) formType = 'Hisuian Form';
-            else if (isDefault) formType = 'Base Form';
-            
-            // Get sprite URL for form
-            let spriteUrl = '';
-            if (form.sprites) {
-                spriteUrl = form.sprites.front_default || 
-                           form.sprites.front_shiny || 
-                           pokemon.sprites.front_default;
-            } else {
-                // Try to construct sprite URL based on form name
-                const pokemonId = pokemon.id;
-                if (isMega) {
-                    spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pokemonId}-mega.gif`;
-                } else if (isAlolan) {
-                    spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pokemonId}-alola.gif`;
-                } else if (isGalarian) {
-                    spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${pokemonId}-galar.gif`;
-                } else {
-                    spriteUrl = pokemon.sprites.front_default;
-                }
-            }
-            
-            // Get types for this form
-            let formTypes = '';
-            if (form.types && form.types.length > 0) {
-                formTypes = form.types.map(type => 
-                    `<span class="type-badge ${type.type.name}">${type.type.name}</span>`
-                ).join('');
-            } else if (pokemon.types) {
-                formTypes = pokemon.types.map(type => 
-                    `<span class="type-badge ${type.type.name}">${type.type.name}</span>`
-                ).join('');
-            }
-            
-            // Calculate stats if available
-            let statsInfo = '';
-            if (form.stats && form.stats.length > 0) {
-                const baseStatTotal = form.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
-                statsInfo = `BST: ${baseStatTotal}`;
-            } else if (pokemon.stats) {
-                const baseStatTotal = pokemon.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
-                statsInfo = `BST: ${baseStatTotal}`;
-            }
+        allForms.forEach(form => {
+            const formName = this.getFormDisplayName(form, pokemon);
+            const formType = this.getFormType(form, pokemon);
+            const isDefault = form.is_default || form.name === pokemon.name;
+            const spriteUrl = this.getFormSpriteUrl(form, pokemon);
+            const formTypes = this.getFormTypes(form, pokemon);
+            const formStats = this.getFormStats(form, pokemon);
             
             formsHTML += `
                 <div class="form-item ${isDefault ? 'default-form' : ''}" data-form="${form.name}">
                     <div class="form-sprite-container">
-                        <img src="${spriteUrl}" alt="${formName}" onerror="this.src='${pokemon.sprites.front_default}'">
+                        <img src="${spriteUrl}" alt="${formName}" 
+                             onerror="this.src='${pokemon.sprites.front_default}'"
+                             loading="lazy">
                     </div>
                     <div class="form-info">
-                        <div class="form-name">${formName.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                        <div class="form-name">${formName}</div>
                         <div class="form-method">${formType}</div>
                         <div class="form-types">${formTypes}</div>
-                        ${statsInfo ? `<div class="form-stats">${statsInfo}</div>` : ''}
-                        ${form.version_group ? `<div class="form-version">Since: ${form.version_group.name.replace('-', ' ')}</div>` : ''}
+                        ${formStats ? `<div class="form-stats">${formStats}</div>` : ''}
+                        ${form.version_group ? `<div class="form-version">Since: ${form.version_group.name.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>` : ''}
+                        ${form.form_description ? `<div class="form-description">${form.form_description}</div>` : ''}
                     </div>
                 </div>
             `;
@@ -803,12 +759,13 @@ class SearchManager {
         formsContainer.querySelectorAll('.form-item').forEach(element => {
             element.addEventListener('click', () => {
                 const formName = element.dataset.form;
-                const form = pokemon.forms.find(f => f.name === formName);
+                const form = allForms.find(f => f.name === formName);
                 if (form) {
                     // Update modal sprite to show this form
                     const modalSprite = document.getElementById('modal-pokemon-sprite');
-                    if (modalSprite && form.sprites && form.sprites.front_default) {
-                        modalSprite.src = form.sprites.front_default;
+                    const newSpriteUrl = this.getFormSpriteUrl(form, pokemon);
+                    if (modalSprite && newSpriteUrl) {
+                        modalSprite.src = newSpriteUrl;
                     }
                     
                     // Highlight selected form

@@ -1655,6 +1655,17 @@ body {
   font-style: italic;
 }
 
+.form-description {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
 .no-forms {
   text-align: center;
   padding: 48px 24px;
@@ -1668,6 +1679,177 @@ body {
 }
 
 /* Locations Tab */
+.location-version-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.location-version-tab {
+  padding: 8px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.location-version-tab:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-light);
+}
+
+.location-version-tab.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  box-shadow: var(--glow-primary);
+}
+
+.version-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: inherit;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.location-version-tab.active .version-count {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.location-version-content {
+  display: none;
+}
+
+.location-version-content.active {
+  display: block;
+}
+
+.version-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.version-header h3 {
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.version-summary {
+  font-size: 14px;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.version-locations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.version-location-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.version-location-item:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.version-location-item .location-header {
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.version-location-item .location-header i {
+  color: var(--primary-color);
+  font-size: 16px;
+}
+
+.version-location-item .location-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.version-location-item .encounter-methods {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.encounter-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.encounter-detail:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
+}
+
+.method-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.method-info .method-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.method-info .level-range {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  width: fit-content;
+}
+
 .location-tabs {
   display: flex;
   gap: 8px;
@@ -1958,6 +2140,29 @@ body {
   text-align: center;
   padding: 48px 24px;
   color: var(--text-muted);
+}
+
+/* Evolution Chain Enhancements */
+.evolution-pokemon.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.evolution-pokemon.clickable:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: var(--shadow-lg), var(--glow-primary);
+  border-color: var(--primary-color);
+}
+
+.evolution-pokemon .pokemon-id {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.evolution-pokemon.clickable:hover .pokemon-id {
+  color: var(--primary-color);
 }
 
 /* Cache Management Modal */
