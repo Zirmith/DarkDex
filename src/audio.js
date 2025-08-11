@@ -2,11 +2,13 @@ class AudioManager {
     constructor() {
         this.sounds = {
             lugiaCry: null,
-            completionSound: null
+            completionSound: null,
+            pokemonCries: new Map()
         };
         this.isEnabled = true;
         this.volume = 0.7;
         this.audioCache = new Map();
+        this.cryCache = new Map();
         this.initializeSounds();
     }
 
@@ -129,6 +131,108 @@ class AudioManager {
             }
         } catch (error) {
             console.warn('Could not play completion sound:', error);
+        }
+    }
+
+    async playPokemonCry(pokemonId) {
+        if (!this.isEnabled) return;
+        
+        try {
+            // Check if cry is already cached
+            const cacheKey = `cry_${pokemonId}`;
+            if (this.cryCache.has(cacheKey)) {
+                const audio = this.cryCache.get(cacheKey);
+                await audio.play();
+                return;
+            }
+
+            // Try to get cached cry from file system
+            const filename = `pokemon_cry_${pokemonId}.ogg`;
+            if (typeof window !== 'undefined' && window.electronAPI) {
+                const cachedAudio = await window.electronAPI.invoke('get-audio-path', filename);
+                if (cachedAudio.success) {
+                    const audio = new Audio(cachedAudio.path);
+                    audio.volume = this.volume * 0.8;
+                    this.cryCache.set(cacheKey, audio);
+                    await audio.play();
+                    return;
+                }
+            }
+
+            // If not cached, load from URL and cache it
+            const cryUrl = `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${pokemonId}.ogg`;
+            const audio = new Audio(cryUrl);
+            audio.volume = this.volume * 0.8;
+            
+            // Cache the audio when it loads
+            audio.addEventListener('canplaythrough', async () => {
+                if (typeof window !== 'undefined' && window.electronAPI) {
+                    try {
+                        await window.electronAPI.invoke('download-audio', cryUrl, filename);
+                        console.log(`Cached cry for Pokemon ${pokemonId}`);
+                    } catch (error) {
+                        console.warn(`Failed to cache cry for Pokemon ${pokemonId}:`, error);
+                    }
+                }
+            });
+
+            // Store in memory cache
+            this.cryCache.set(cacheKey, audio);
+            
+            // Play the cry
+            await audio.play();
+            
+        } catch (error) {
+            console.warn(`Could not play cry for Pokemon ${pokemonId}:`, error);
+            // Create fallback sound
+            this.createFallbackCry(pokemonId);
+        }
+    }
+
+    createFallbackCry(pokemonId) {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Create a simple tone based on Pokemon ID
+            const baseFreq = 200 + (pokemonId * 2);
+            const frequencies = [baseFreq, baseFreq * 1.2, baseFreq * 0.8];
+            
+            const gainNode = audioContext.createGain();
+            gainNode.connect(audioContext.destination);
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(this.volume * 0.2, audioContext.currentTime + 0.1);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+
+            frequencies.forEach((freq, index) => {
+                const oscillator = audioContext.createOscillator();
+                oscillator.connect(gainNode);
+                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+                oscillator.type = 'sine';
+                
+                const startTime = audioContext.currentTime + (index * 0.3);
+                const endTime = startTime + 0.3;
+                
+                oscillator.start(startTime);
+                oscillator.stop(endTime);
+            });
+        } catch (error) {
+            console.error('Error creating fallback cry:', error);
+        }
+    }
+
+    async clearCryCache() {
+        this.cryCache.clear();
+        if (typeof window !== 'undefined' && window.electronAPI) {
+            try {
+                // Clear only Pokemon cry files, not other audio
+                const result = await window.electronAPI.invoke('get-cache-stats');
+                if (result.success) {
+                    // This would need a more specific clear method for just cries
+                    console.log('Cry cache cleared from memory');
+                }
+            } catch (error) {
+                console.error('Error clearing cry cache:', error);
+            }
         }
     }
 

@@ -138,6 +138,9 @@ class DarkDexApp {
         if (statusText) {
             statusText.textContent = text;
         }
+        
+        // Also log to console for debugging
+        console.log('Loading Status:', text);
     }
 
     updateProgress(percentage) {

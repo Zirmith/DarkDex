@@ -201,6 +201,12 @@ class PokemonAPI {
                 const batch = pokemonList.results.slice(i, Math.min(i + batchSize, maxToProcess));
                 const batchPromises = batch.map(async (pokemon) => {
                     try {
+                        // Update loading status with current Pokemon name
+                        const pokemonName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+                        if (window.darkdexApp) {
+                            window.darkdexApp.updateLoadingStatus(`Loading ${pokemonName}... (${detailedPokemon.length + 1}/${maxToProcess})`);
+                        }
+                        
                         // Cache individual Pokemon data
                         const details = await this.getPokemon(pokemon.name);
                         if (!details) return null;
@@ -542,16 +548,24 @@ class PokemonAPI {
 
     async getCompletePokemonData(idOrName) {
         try {
+            // Validate input
+            if (!idOrName) {
+                throw new Error('Pokemon ID or name is required');
+            }
+            
+            // Clean the input
+            const cleanInput = typeof idOrName === 'string' ? idOrName.toLowerCase().trim() : idOrName;
+            
             // Check if we have complete cached data
-            const cacheKey = `complete_pokemon_${idOrName}`;
+            const cacheKey = `complete_pokemon_${cleanInput}`;
             const cached = await this.fetchData(null, cacheKey);
             if (cached) return cached;
             
             // Fetch all data
-            const pokemon = await this.getPokemon(idOrName);
+            const pokemon = await this.getPokemon(cleanInput);
             if (!pokemon) return null;
             
-            const species = await this.getPokemonSpecies(idOrName);
+            const species = await this.getPokemonSpecies(cleanInput);
             const encounters = await this.getPokemonEncounters(pokemon.id).catch(() => []);
             
             let evolutionChain = null;
@@ -576,6 +590,32 @@ class PokemonAPI {
             console.error(`Error getting complete Pokemon data for ${idOrName}:`, error);
             return null;
         }
+    }
+
+    // Track failed Pokemon for retry functionality
+    getFailedPokemon() {
+        return this.failedPokemon || [];
+    }
+
+    async retryFailedPokemon() {
+        const failed = this.getFailedPokemon();
+        if (failed.length === 0) return [];
+        
+        const retryResults = [];
+        for (const pokemon of failed) {
+            try {
+                const result = await this.getCompletePokemonData(pokemon.name || pokemon.id);
+                if (result) {
+                    retryResults.push(result);
+                    // Remove from failed list
+                    this.failedPokemon = this.failedPokemon.filter(p => p.name !== pokemon.name);
+                }
+            } catch (error) {
+                console.error(`Retry failed for ${pokemon.name}:`, error);
+            }
+        }
+        
+        return retryResults;
     }
 
     async clearDataCache() {
