@@ -4,6 +4,7 @@ class DarkDexApp {
         this.isInitialized = false;
         this.splashShown = false;
         this.loadingProgress = 0;
+        this.updateManager = new UpdateManager();
         this.totalSteps = 4;
         this.pokemonLoadProgress = 0;
         this.totalPokemon = 1302;
@@ -28,6 +29,7 @@ class DarkDexApp {
             
             // Setup cache management modal
             this.setupCacheManagement();
+            this.setupUpdateSystem();
             
             // Setup search functionality
             this.setupSearch();
@@ -175,6 +177,116 @@ class DarkDexApp {
                     cacheModal.style.display = 'none';
                 }
             });
+        }
+    }
+
+    setupUpdateSystem() {
+        try {
+            // Setup update notification handlers
+            const viewUpdateBtn = document.getElementById('view-update');
+            const dismissUpdateBtn = document.getElementById('dismiss-update');
+            const updateModal = document.getElementById('update-modal');
+            const closeUpdateModal = document.getElementById('close-update-modal');
+            
+            if (viewUpdateBtn) {
+                viewUpdateBtn.addEventListener('click', () => {
+                    this.showUpdateModal();
+                });
+            }
+            
+            if (dismissUpdateBtn) {
+                dismissUpdateBtn.addEventListener('click', () => {
+                    this.hideUpdateNotification();
+                });
+            }
+            
+            if (closeUpdateModal) {
+                closeUpdateModal.addEventListener('click', () => {
+                    this.hideUpdateModal();
+                });
+            }
+            
+            // Setup update modal buttons
+            const checkUpdatesBtn = document.getElementById('check-updates');
+            const installUpdateBtn = document.getElementById('install-update');
+            const restartAppBtn = document.getElementById('restart-app');
+            const skipUpdateBtn = document.getElementById('skip-update');
+            const autoUpdateCheck = document.getElementById('auto-update-check');
+            
+            if (checkUpdatesBtn) {
+                checkUpdatesBtn.addEventListener('click', () => {
+                    this.updateManager.checkForUpdates();
+                });
+            }
+            
+            if (installUpdateBtn) {
+                installUpdateBtn.addEventListener('click', () => {
+                    this.updateManager.installUpdate();
+                });
+            }
+            
+            if (restartAppBtn) {
+                restartAppBtn.addEventListener('click', () => {
+                    this.updateManager.restartApp();
+                });
+            }
+            
+            if (skipUpdateBtn) {
+                skipUpdateBtn.addEventListener('click', () => {
+                    this.updateManager.skipUpdate();
+                    this.hideUpdateModal();
+                });
+            }
+            
+            if (autoUpdateCheck) {
+                autoUpdateCheck.addEventListener('change', (e) => {
+                    this.updateManager.setAutoUpdate(e.target.checked);
+                });
+            }
+            
+            // Initialize update manager
+            this.updateManager.initialize();
+            
+        } catch (error) {
+            console.error('Error setting up update system:', error);
+        }
+    }
+
+    showUpdateNotification(updateInfo) {
+        const notification = document.getElementById('update-notification');
+        const message = document.getElementById('update-message');
+        
+        if (notification && message) {
+            message.textContent = updateInfo.message || 'A new version of DarkDex is available!';
+            notification.style.display = 'block';
+            notification.classList.remove('hide');
+        }
+    }
+    
+    hideUpdateNotification() {
+        const notification = document.getElementById('update-notification');
+        if (notification) {
+            notification.classList.add('hide');
+            setTimeout(() => {
+                notification.style.display = 'none';
+                notification.classList.remove('hide');
+            }, 300);
+        }
+    }
+    
+    showUpdateModal() {
+        const modal = document.getElementById('update-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            this.hideUpdateNotification();
+            this.updateManager.loadUpdateDetails();
+        }
+    }
+    
+    hideUpdateModal() {
+        const modal = document.getElementById('update-modal');
+        if (modal) {
+            modal.style.display = 'none';
         }
     }
 
@@ -1166,6 +1278,383 @@ class DarkDexApp {
 
     getPokemonData() {
         return this.allPokemonData;
+    }
+}
+
+// Update Manager Class
+class UpdateManager {
+    constructor() {
+        this.currentVersion = '1.0.0';
+        this.latestVersion = null;
+        this.updateInfo = null;
+        this.autoUpdate = true;
+        this.updateInProgress = false;
+        this.checkInterval = null;
+    }
+    
+    initialize() {
+        // Load settings
+        this.loadSettings();
+        
+        // Start auto-update check if enabled
+        if (this.autoUpdate) {
+            this.startAutoUpdateCheck();
+        }
+        
+        // Check for updates on startup
+        setTimeout(() => {
+            this.checkForUpdates(true); // Silent check
+        }, 5000);
+    }
+    
+    loadSettings() {
+        try {
+            const settings = localStorage.getItem('darkdex-update-settings');
+            if (settings) {
+                const parsed = JSON.parse(settings);
+                this.autoUpdate = parsed.autoUpdate !== false;
+            }
+            
+            // Update UI
+            const autoUpdateCheck = document.getElementById('auto-update-check');
+            if (autoUpdateCheck) {
+                autoUpdateCheck.checked = this.autoUpdate;
+            }
+        } catch (error) {
+            console.error('Error loading update settings:', error);
+        }
+    }
+    
+    saveSettings() {
+        try {
+            const settings = {
+                autoUpdate: this.autoUpdate,
+                lastCheck: new Date().toISOString()
+            };
+            localStorage.setItem('darkdex-update-settings', JSON.stringify(settings));
+        } catch (error) {
+            console.error('Error saving update settings:', error);
+        }
+    }
+    
+    setAutoUpdate(enabled) {
+        this.autoUpdate = enabled;
+        this.saveSettings();
+        
+        if (enabled) {
+            this.startAutoUpdateCheck();
+        } else {
+            this.stopAutoUpdateCheck();
+        }
+    }
+    
+    startAutoUpdateCheck() {
+        this.stopAutoUpdateCheck(); // Clear existing interval
+        
+        // Check every 6 hours
+        this.checkInterval = setInterval(() => {
+            this.checkForUpdates(true);
+        }, 6 * 60 * 60 * 1000);
+    }
+    
+    stopAutoUpdateCheck() {
+        if (this.checkInterval) {
+            clearInterval(this.checkInterval);
+            this.checkInterval = null;
+        }
+    }
+    
+    async checkForUpdates(silent = false) {
+        if (this.updateInProgress) return;
+        
+        try {
+            if (!silent) {
+                this.updateStatus('Checking for updates...', 'info');
+            }
+            
+            // Simulate update check (in real app, this would call GitHub API)
+            const updateInfo = await this.fetchUpdateInfo();
+            
+            if (updateInfo && updateInfo.hasUpdate) {
+                this.latestVersion = updateInfo.version;
+                this.updateInfo = updateInfo;
+                
+                if (!silent) {
+                    this.showUpdateDetails(updateInfo);
+                } else {
+                    // Show notification for silent checks
+                    if (window.darkdexApp) {
+                        window.darkdexApp.showUpdateNotification({
+                            message: `Version ${updateInfo.version} is available!`
+                        });
+                    }
+                }
+            } else {
+                if (!silent) {
+                    this.updateStatus('You are running the latest version!', 'success');
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error checking for updates:', error);
+            if (!silent) {
+                this.updateStatus('Failed to check for updates. Please try again later.', 'error');
+            }
+        }
+    }
+    
+    async fetchUpdateInfo() {
+        // Simulate API call - in real app, this would fetch from GitHub releases
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                // Simulate having an update available
+                const hasUpdate = Math.random() > 0.7; // 30% chance of update
+                
+                if (hasUpdate) {
+                    resolve({
+                        hasUpdate: true,
+                        version: '1.1.0',
+                        changelog: [
+                            {
+                                type: 'feature',
+                                description: 'Added new Shadow Lugia theme variants'
+                            },
+                            {
+                                type: 'improvement',
+                                description: 'Improved sprite loading performance'
+                            },
+                            {
+                                type: 'fix',
+                                description: 'Fixed evolution chain display issues'
+                            }
+                        ],
+                        files: [
+                            { name: 'src/styles.css', status: 'modified', size: '45.2 KB' },
+                            { name: 'src/renderer.js', status: 'modified', size: '32.1 KB' },
+                            { name: 'src/sprites.js', status: 'modified', size: '18.7 KB' },
+                            { name: 'src/new-feature.js', status: 'new', size: '12.3 KB' }
+                        ]
+                    });
+                } else {
+                    resolve({ hasUpdate: false });
+                }
+            }, 2000);
+        });
+    }
+    
+    showUpdateDetails(updateInfo) {
+        // Update version info
+        const currentVersionEl = document.getElementById('current-version');
+        const latestVersionEl = document.getElementById('latest-version');
+        
+        if (currentVersionEl) currentVersionEl.textContent = this.currentVersion;
+        if (latestVersionEl) latestVersionEl.textContent = updateInfo.version;
+        
+        // Show changelog
+        this.showChangelog(updateInfo.changelog);
+        
+        // Show files
+        this.showFilesList(updateInfo.files);
+        
+        // Show update details section
+        const updateDetails = document.getElementById('update-details');
+        const installBtn = document.getElementById('install-update');
+        const skipBtn = document.getElementById('skip-update');
+        
+        if (updateDetails) updateDetails.style.display = 'block';
+        if (installBtn) installBtn.style.display = 'inline-flex';
+        if (skipBtn) skipBtn.style.display = 'inline-flex';
+        
+        this.updateStatus('Update available!', 'success');
+    }
+    
+    showChangelog(changelog) {
+        const changelogContent = document.getElementById('changelog-content');
+        if (!changelogContent || !changelog) return;
+        
+        changelogContent.innerHTML = '';
+        
+        changelog.forEach(item => {
+            const changelogItem = document.createElement('div');
+            changelogItem.className = 'changelog-item';
+            
+            changelogItem.innerHTML = `
+                <div class="changelog-type ${item.type}">${item.type}</div>
+                <div class="changelog-description">${item.description}</div>
+            `;
+            
+            changelogContent.appendChild(changelogItem);
+        });
+    }
+    
+    showFilesList(files) {
+        const filesList = document.getElementById('files-list');
+        if (!filesList || !files) return;
+        
+        filesList.innerHTML = '';
+        
+        files.forEach(file => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            
+            fileItem.innerHTML = `
+                <div class="file-status ${file.status}"></div>
+                <div class="file-name">${file.name}</div>
+                <div class="file-size">${file.size}</div>
+            `;
+            
+            filesList.appendChild(fileItem);
+        });
+    }
+    
+    async installUpdate() {
+        if (this.updateInProgress) return;
+        
+        this.updateInProgress = true;
+        
+        try {
+            // Hide other sections and show progress
+            this.showUpdateProgress();
+            
+            // Simulate update installation
+            await this.performUpdate();
+            
+            // Show completion
+            this.showUpdateComplete();
+            
+        } catch (error) {
+            console.error('Error installing update:', error);
+            this.showUpdateError(error);
+        } finally {
+            this.updateInProgress = false;
+        }
+    }
+    
+    showUpdateProgress() {
+        const updateDetails = document.getElementById('update-details');
+        const updateProgress = document.getElementById('update-progress');
+        const installBtn = document.getElementById('install-update');
+        const skipBtn = document.getElementById('skip-update');
+        
+        if (updateDetails) updateDetails.style.display = 'none';
+        if (updateProgress) updateProgress.style.display = 'block';
+        if (installBtn) installBtn.style.display = 'none';
+        if (skipBtn) skipBtn.style.display = 'none';
+        
+        this.updateStatus('Installing update...', 'info');
+    }
+    
+    async performUpdate() {
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const filesUpdated = document.getElementById('files-updated');
+        const totalFiles = document.getElementById('total-files');
+        
+        const files = this.updateInfo?.files || [];
+        if (totalFiles) totalFiles.textContent = files.length;
+        
+        // Simulate file updates
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const progress = ((i + 1) / files.length) * 100;
+            
+            if (progressFill) progressFill.style.width = `${progress}%`;
+            if (progressText) progressText.textContent = `Updating ${file.name}...`;
+            if (filesUpdated) filesUpdated.textContent = i + 1;
+            
+            // Simulate download time
+            await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+        }
+        
+        if (progressText) progressText.textContent = 'Finalizing update...';
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    showUpdateComplete() {
+        const updateProgress = document.getElementById('update-progress');
+        const updateComplete = document.getElementById('update-complete');
+        const restartBtn = document.getElementById('restart-app');
+        
+        if (updateProgress) updateProgress.style.display = 'none';
+        if (updateComplete) updateComplete.style.display = 'block';
+        if (restartBtn) restartBtn.style.display = 'inline-flex';
+        
+        this.updateStatus('Update completed successfully!', 'success');
+    }
+    
+    showUpdateError(error) {
+        const updateProgress = document.getElementById('update-progress');
+        const updateError = document.getElementById('update-error');
+        const errorMessage = document.getElementById('error-message');
+        const errorStack = document.getElementById('error-stack');
+        const checkBtn = document.getElementById('check-updates');
+        
+        if (updateProgress) updateProgress.style.display = 'none';
+        if (updateError) updateError.style.display = 'block';
+        if (errorMessage) errorMessage.textContent = error.message || 'An unknown error occurred';
+        if (errorStack) errorStack.textContent = error.stack || error.toString();
+        if (checkBtn) checkBtn.style.display = 'inline-flex';
+        
+        this.updateStatus('Update failed!', 'error');
+    }
+    
+    updateStatus(message, type = 'info') {
+        const statusEl = document.querySelector('.status-item span');
+        const statusIcon = document.querySelector('.status-item i');
+        
+        if (statusEl) statusEl.textContent = message;
+        
+        if (statusIcon) {
+            statusIcon.className = type === 'success' ? 'ri-check-line' :
+                                 type === 'error' ? 'ri-error-warning-line' :
+                                 type === 'info' ? 'ri-information-line' :
+                                 'ri-loader-4-line';
+        }
+    }
+    
+    loadUpdateDetails() {
+        // Reset modal state
+        const sections = ['update-details', 'update-progress', 'update-complete', 'update-error'];
+        sections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        
+        const buttons = ['install-update', 'restart-app', 'skip-update'];
+        buttons.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        
+        // Show check button
+        const checkBtn = document.getElementById('check-updates');
+        if (checkBtn) checkBtn.style.display = 'inline-flex';
+        
+        // If we have update info, show it
+        if (this.updateInfo && this.updateInfo.hasUpdate) {
+            this.showUpdateDetails(this.updateInfo);
+        } else {
+            this.updateStatus('Click "Check for Updates" to see if a new version is available.', 'info');
+        }
+    }
+    
+    skipUpdate() {
+        // Mark this version as skipped
+        if (this.latestVersion) {
+            localStorage.setItem('darkdex-skipped-version', this.latestVersion);
+        }
+    }
+    
+    restartApp() {
+        // In Electron, this would restart the app
+        if (typeof window !== 'undefined' && window.electronAPI) {
+            // This would need to be implemented in main.js
+            console.log('Restarting application...');
+            // window.electronAPI.invoke('restart-app');
+        } else {
+            // For web version, just reload
+            window.location.reload();
+        }
     }
 }
 
