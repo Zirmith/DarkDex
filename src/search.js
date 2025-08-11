@@ -379,11 +379,19 @@ class SearchManager {
 
         let abilitiesHTML = '<div class="abilities-detailed">';
         
-        for (const abilityData of pokemon.abilities) {
+        // Use detailed abilities if available, otherwise fall back to regular abilities
+        const abilitiesToShow = pokemon.detailedAbilities || pokemon.abilities;
+        
+        for (const abilityData of abilitiesToShow) {
             try {
-                const abilityDetails = await window.pokemonAPI.getAbility(abilityData.ability.name);
+                // Use cached detailed ability info if available
+                let abilityDetails = abilityData.details;
+                if (!abilityDetails) {
+                    abilityDetails = await window.pokemonAPI.getAbility(abilityData.ability.name);
+                }
+                
                 const description = this.getAbilityDescription(abilityDetails);
-                const generation = abilityDetails.generation ? abilityDetails.generation.name.replace('-', ' ').toUpperCase() : 'Unknown';
+                const generation = abilityDetails && abilityDetails.generation ? abilityDetails.generation.name.replace('-', ' ').toUpperCase() : 'Unknown';
                 
                 abilitiesHTML += `
                     <div class="ability-detailed ${abilityData.is_hidden ? 'hidden' : ''}">
@@ -430,6 +438,9 @@ class SearchManager {
         const movesContainer = document.getElementById('modal-pokemon-moves');
         if (!movesContainer) return;
 
+        // Use detailed moves if available for better performance
+        const movesToShow = pokemon.detailedMoves && pokemon.detailedMoves.length > 0 ? pokemon.detailedMoves : pokemon.moves;
+        
         // Group moves by learn method
         const movesByMethod = {
             'level-up': [],
@@ -438,14 +449,15 @@ class SearchManager {
             'tutor': []
         };
 
-        pokemon.moves.forEach(moveData => {
+        movesToShow.forEach(moveData => {
             moveData.version_group_details.forEach(detail => {
                 const method = detail.move_learn_method.name;
                 if (movesByMethod[method]) {
                     movesByMethod[method].push({
                         name: moveData.move.name,
                         level: detail.level_learned_at,
-                        url: moveData.move.url
+                        url: moveData.move.url,
+                        details: moveData.details // Include cached details if available
                     });
                 }
             });
@@ -468,7 +480,7 @@ class SearchManager {
                         <h4>${methodName} (${moves.length})</h4>
                         <div class="moves-grid">
                             ${moves.map(move => 
-                                `<div class="move-item" data-move-url="${move.url}" data-move-name="${move.name}">
+                                `<div class="move-item" data-move-url="${move.url}" data-move-name="${move.name}" ${move.details ? 'data-has-details="true"' : ''}>
                                     <div class="move-name">${move.name.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
                                     ${method === 'level-up' && move.level > 0 ? `<div class="move-level">Lv.${move.level}</div>` : ''}
                                     <div class="move-details-btn">
@@ -489,15 +501,16 @@ class SearchManager {
             moveElement.addEventListener('click', async () => {
                 const moveUrl = moveElement.dataset.moveUrl;
                 const moveName = moveElement.dataset.moveName;
+                const hasDetails = moveElement.dataset.hasDetails === 'true';
                 
                 if (moveUrl) {
-                    await this.showMoveDetails(moveName, moveUrl, moveElement);
+                    await this.showMoveDetails(moveName, moveUrl, moveElement, hasDetails);
                 }
             });
         });
     }
 
-    async showMoveDetails(moveName, moveUrl, moveElement) {
+    async showMoveDetails(moveName, moveUrl, moveElement, hasDetails = false) {
         try {
             // Show loading state
             const originalContent = moveElement.innerHTML;
@@ -508,7 +521,17 @@ class SearchManager {
                 </div>
             `;
             
-            const moveDetails = await window.pokemonAPI.getMoveDetails(moveName);
+            let moveDetails;
+            if (hasDetails) {
+                // Try to find cached details first
+                const pokemon = document.getElementById('pokemon-modal').currentPokemon;
+                const cachedMove = pokemon.detailedMoves?.find(m => m.move.name === moveName);
+                moveDetails = cachedMove?.details;
+            }
+            
+            if (!moveDetails) {
+                moveDetails = await window.pokemonAPI.getMoveDetails(moveName);
+            }
             
             if (moveDetails) {
                 const description = this.getMoveDescription(moveDetails);
@@ -529,7 +552,7 @@ class SearchManager {
                             <button class="close-move-details">
                                 <i class="ri-close-line"></i>
                             </button>
-                        </div>
+                                `<div class="move-item" data-move-url="${move.url}" data-move-name="${move.name}" ${move.details ? 'data-has-details="true"' : ''}>
                         <div class="move-details-body">
                             <div class="move-stats">
                                 <div class="move-stat">
@@ -689,6 +712,7 @@ class SearchManager {
         container.querySelectorAll('.evolution-pokemon').forEach(element => {
             element.addEventListener('click', async () => {
                 const pokemonName = element.dataset.pokemon;
+                const hasDetails = moveElement.dataset.hasDetails === 'true';
                 try {
                     const evolutionPokemon = await window.pokemonAPI.getCompletePokemonData(pokemonName);
                     if (evolutionPokemon) {
@@ -948,15 +972,25 @@ class SearchManager {
     async showCacheManagement() {
         const cacheModal = document.getElementById('cache-modal');
         if (!cacheModal) return;
-
+                    await this.showMoveDetails(moveName, moveUrl, moveElement, hasDetails);
         cacheModal.style.display = 'block';
 
         // Load cache stats
         const cacheStats = document.getElementById('cache-stats');
         const cacheActions = document.getElementById('cache-actions');
-
+    async showMoveDetails(moveName, moveUrl, moveElement, hasDetails = false) {
         try {
-            const stats = await window.pokemonAPI.getCacheStats();
+            let moveDetails;
+            if (hasDetails) {
+                // Try to find cached details first
+                const pokemon = document.getElementById('pokemon-modal').currentPokemon;
+                const cachedMove = pokemon.detailedMoves?.find(m => m.move.name === moveName);
+                moveDetails = cachedMove?.details;
+            }
+            
+            if (!moveDetails) {
+                moveDetails = await window.pokemonAPI.getMoveDetails(moveName);
+            }
             
             if (stats) {
                 cacheStats.innerHTML = this.renderCacheStats(stats);
