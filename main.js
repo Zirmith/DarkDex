@@ -55,57 +55,91 @@ function createWindow() {
 }
 
 
-// =====================
-// GitHub SRC Folder Updater
-// =====================
+// ====== GitHub Update + Backup ======
 
-// Helper: SHA256 hash
+// Helper: SHA-256 hash for content comparison
 const hashContent = (content) => crypto.createHash('sha256').update(content).digest('hex');
 
-// Get file list from GitHub API recursively
-const getGitHubFileList = async (repoOwner, repoName, folderPath) => {
-  const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${folderPath}`;
-  const res = await axios.get(apiUrl, { headers: { 'User-Agent': 'Electron-Updater' } });
-  
+// Helper: Fetch JSON file list from GitHub API recursively
+async function fetchGitHubFiles(owner, repo, branch, dir) {
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${dir}?ref=${branch}`;
+  const res = await axios.get(apiUrl, { headers: { 'User-Agent': 'Electron-App' } });
+
   let files = [];
   for (const item of res.data) {
     if (item.type === 'file') {
       files.push(item.path);
     } else if (item.type === 'dir') {
-      const subFiles = await getGitHubFileList(repoOwner, repoName, item.path);
-      files = files.concat(subFiles);
+      files = files.concat(await fetchGitHubFiles(owner, repo, branch, item.path));
     }
   }
   return files;
-};
+}
 
-// Download file raw content
-const downloadRawFile = async (repoOwner, repoName, branch, filePath) => {
-  const rawUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branch}/${filePath}`;
+// Helper: Download raw file from GitHub
+async function downloadGitHubFile(owner, repo, branch, filePath) {
+  const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
   const res = await axios.get(rawUrl, { responseType: 'text' });
   return res.data;
-};
+}
 
-// Update all files in /src
-const updateSrcFromGitHub = async () => {
-  const repoOwner = 'Zirmith';
-  const repoName = 'DarkDex';
+// Helper: Make backup of `src` folder
+function backupSrcFolder() {
+  const srcPath = path.join(__dirname, 'src');
+  if (!fs.existsSync(srcPath)) return null;
+
+  const backupDir = path.join(__dirname, 'backup_src');
+  fs.mkdirSync(backupDir, { recursive: true });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = path.join(backupDir, `src_backup_${timestamp}`);
+  fs.mkdirSync(backupPath, { recursive: true });
+
+  copyFolderRecursiveSync(srcPath, backupPath);
+  return backupPath;
+}
+
+// Helper: Recursively copy folder
+function copyFolderRecursiveSync(source, target) {
+  if (!fs.existsSync(source)) return;
+  fs.mkdirSync(target, { recursive: true });
+
+  for (const file of fs.readdirSync(source)) {
+    const srcFile = path.join(source, file);
+    const destFile = path.join(target, file);
+    if (fs.lstatSync(srcFile).isDirectory()) {
+      copyFolderRecursiveSync(srcFile, destFile);
+    } else {
+      fs.copyFileSync(srcFile, destFile);
+    }
+  }
+}
+
+// Auto-update src folder
+async function updateSrcFromGitHub() {
+  const owner = 'Zirmith';
+  const repo = 'DarkDex';
   const branch = 'main';
-  const folderPath = 'src';
-  const localBase = path.join(__dirname, 'src');
+  const srcFolder = 'src';
 
-  console.log('[Updater] Checking GitHub for /src updates...');
-  const files = await getGitHubFileList(repoOwner, repoName, folderPath);
-  let updated = [];
+  try {
+    console.log('Checking for updates...');
+    const files = await fetchGitHubFiles(owner, repo, branch, srcFolder);
 
-  for (const file of files) {
-    try {
-      const remoteContent = await downloadRawFile(repoOwner, repoName, branch, file);
+    let updatedFiles = [];
+
+    // Backup before updating
+    const backupPath = backupSrcFolder();
+    if (backupPath) {
+      console.log(`Backup created at: ${backupPath}`);
+    }
+
+    for (const file of files) {
+      const localPath = path.join(__dirname, file);
+      const remoteContent = await downloadGitHubFile(owner, repo, branch, file);
       const remoteHash = hashContent(remoteContent);
 
-      const localPath = path.join(__dirname, file);
       let localHash = null;
-
       if (fs.existsSync(localPath)) {
         const localContent = fs.readFileSync(localPath, 'utf8');
         localHash = hashContent(localContent);
@@ -114,23 +148,24 @@ const updateSrcFromGitHub = async () => {
       if (remoteHash !== localHash) {
         fs.mkdirSync(path.dirname(localPath), { recursive: true });
         fs.writeFileSync(localPath, remoteContent, 'utf8');
-        updated.push(file);
+        updatedFiles.push(file);
       }
-    } catch (err) {
-      console.error(`[Updater] Failed to update ${file}:`, err.message);
     }
-  }
 
-  if (updated.length > 0) {
-    console.log(`[Updater] Updated files:\n- ${updated.join('\n- ')}`);
-    dialog.showMessageBox({ 
-      type: 'info', 
-      message: `Updated ${updated.length} file(s) from GitHub. Restart app for changes.`
-    });
-  } else {
-    console.log('[Updater] All src files are up to date.');
+    if (updatedFiles.length > 0) {
+      console.log(`Updated files: ${updatedFiles.join(', ')}`);
+      dialog.showMessageBox({
+        type: 'info',
+        message: 'DarkDex has been updated. Please restart the app to apply changes.'
+      });
+    } else {
+      console.log('No updates found.');
+    }
+  } catch (err) {
+    console.error('Update failed:', err.message);
   }
-};
+}
+
 
 // API and caching handlers
 ipcMain.handle('fetch-pokemon-data', async (event, url) => {
