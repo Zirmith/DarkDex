@@ -184,6 +184,10 @@ class AudioManager {
             
         } catch (error) {
             console.warn(`Could not play cry for Pokemon ${pokemonId}:`, error);
+            // Track failed audio
+            if (window.pokemonAPI) {
+                window.pokemonAPI.addFailedAudio({ id: pokemonId, name: `pokemon-${pokemonId}` }, error);
+            }
             // Create fallback sound
             this.createFallbackCry(pokemonId);
         }

@@ -2366,6 +2366,288 @@ body {
   color: var(--text-muted);
 }
 
+/* Failed Downloads Section */
+.failed-downloads-section {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.failed-downloads-header {
+  margin-bottom: 20px;
+}
+
+.failed-downloads-header h4 {
+  color: var(--error-color);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.failed-downloads-header i {
+  font-size: 18px;
+}
+
+.failed-downloads-description {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.failed-downloads-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.failed-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.failed-stat-item i {
+  font-size: 24px;
+  color: var(--error-color);
+}
+
+.failed-stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.failed-stat-count {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--error-color);
+}
+
+.failed-downloads-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+
+.failed-download-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.failed-download-item:last-child {
+  border-bottom: none;
+}
+
+.failed-download-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.failed-download-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 16px;
+}
+
+.failed-download-icon.pokemon {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.failed-download-icon.sprite {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning-color);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.failed-download-icon.audio {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--info-color);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.failed-download-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.failed-download-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.failed-download-type {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.failed-download-error {
+  font-size: 11px;
+  color: var(--error-color);
+  background: rgba(239, 68, 68, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.failed-download-timestamp {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.failed-download-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.retry-single-btn {
+  padding: 6px 12px;
+  background: var(--success-color);
+  border: 1px solid var(--success-color);
+  border-radius: 6px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.retry-single-btn:hover {
+  background: #059669;
+  border-color: #059669;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.retry-single-btn:disabled {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.remove-single-btn {
+  padding: 6px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-single-btn:hover {
+  background: var(--error-color);
+  border-color: var(--error-color);
+  color: white;
+}
+
+.failed-downloads-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.failed-downloads-actions .btn-secondary {
+  width: auto;
+  padding: 10px 20px;
+  font-size: 14px;
+}
+
+.failed-downloads-actions .btn-secondary:first-child {
+  background: var(--success-color);
+  border-color: var(--success-color);
+  color: white;
+}
+
+.failed-downloads-actions .btn-secondary:first-child:hover {
+  background: #059669;
+  border-color: #059669;
+}
+
+.failed-downloads-actions .btn-secondary:last-child {
+  background: var(--error-color);
+  border-color: var(--error-color);
+  color: white;
+}
+
+.failed-downloads-actions .btn-secondary:last-child:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.no-failed-downloads {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.no-failed-downloads i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: var(--success-color);
+}
+
+.no-failed-downloads h5 {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.no-failed-downloads p {
+  font-size: 14px;
+  margin: 0;
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;

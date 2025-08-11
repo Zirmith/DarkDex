@@ -291,6 +291,10 @@ class PokemonAPI {
             // Retry failed Pokemon in background with longer delays
             if (failedPokemon.length > 0) {
                 console.log(`Retrying ${failedPokemon.length} failed Pokemon in background...`);
+                // Track failed Pokemon
+                failedPokemon.forEach(pokemon => {
+                    this.addFailedPokemon(pokemon, new Error('Initial download failed'));
+                });
                 this.retryFailedPokemonInBackground(failedPokemon, detailedPokemon);
             }
 
@@ -390,6 +394,138 @@ class PokemonAPI {
                     console.error(`Failed to retry ${pokemon.name}:`, error);
                 }
             }, delay);
+        }
+    }
+
+    // Initialize failed Pokemon tracking
+    initializeFailedTracking() {
+        if (!this.failedPokemon) {
+            this.failedPokemon = [];
+        }
+        if (!this.failedSprites) {
+            this.failedSprites = [];
+        }
+        if (!this.failedAudio) {
+            this.failedAudio = [];
+        }
+    }
+
+    // Add failed Pokemon to tracking
+    addFailedPokemon(pokemon, error) {
+        this.initializeFailedTracking();
+        const failedEntry = {
+            id: pokemon.id || pokemon.name,
+            name: pokemon.name,
+            error: error.message || error,
+            timestamp: new Date().toISOString(),
+            type: 'pokemon'
+        };
+        
+        // Avoid duplicates
+        if (!this.failedPokemon.find(p => p.id === failedEntry.id)) {
+            this.failedPokemon.push(failedEntry);
+        }
+    }
+
+    // Add failed sprite to tracking
+    addFailedSprite(pokemon, error) {
+        this.initializeFailedTracking();
+        const failedEntry = {
+            id: pokemon.id || pokemon.name,
+            name: pokemon.name,
+            error: error.message || error,
+            timestamp: new Date().toISOString(),
+            type: 'sprite'
+        };
+        
+        if (!this.failedSprites.find(p => p.id === failedEntry.id)) {
+            this.failedSprites.push(failedEntry);
+        }
+    }
+
+    // Add failed audio to tracking
+    addFailedAudio(pokemon, error) {
+        this.initializeFailedTracking();
+        const failedEntry = {
+            id: pokemon.id || pokemon.name,
+            name: pokemon.name,
+            error: error.message || error,
+            timestamp: new Date().toISOString(),
+            type: 'audio'
+        };
+        
+        if (!this.failedAudio.find(p => p.id === failedEntry.id)) {
+            this.failedAudio.push(failedEntry);
+        }
+    }
+
+    // Get all failed downloads
+    getAllFailedDownloads() {
+        this.initializeFailedTracking();
+        return {
+            pokemon: this.failedPokemon || [],
+            sprites: this.failedSprites || [],
+            audio: this.failedAudio || [],
+            total: (this.failedPokemon?.length || 0) + (this.failedSprites?.length || 0) + (this.failedAudio?.length || 0)
+        };
+    }
+
+    // Clear failed downloads
+    clearFailedDownloads(type = 'all') {
+        this.initializeFailedTracking();
+        switch (type) {
+            case 'pokemon':
+                this.failedPokemon = [];
+                break;
+            case 'sprites':
+                this.failedSprites = [];
+                break;
+            case 'audio':
+                this.failedAudio = [];
+                break;
+            case 'all':
+            default:
+                this.failedPokemon = [];
+                this.failedSprites = [];
+                this.failedAudio = [];
+                break;
+        }
+    }
+
+    // Retry specific failed download
+    async retryFailedDownload(failedItem) {
+        try {
+            switch (failedItem.type) {
+                case 'pokemon':
+                    const pokemonData = await this.getCompletePokemonData(failedItem.id);
+                    if (pokemonData) {
+                        // Remove from failed list
+                        this.failedPokemon = this.failedPokemon.filter(p => p.id !== failedItem.id);
+                        return { success: true, data: pokemonData };
+                    }
+                    break;
+                case 'sprite':
+                    // This would need sprite manager integration
+                    if (window.spriteManager) {
+                        const pokemon = { id: failedItem.id, name: failedItem.name };
+                        await window.spriteManager.loadSprite(pokemon);
+                        this.failedSprites = this.failedSprites.filter(p => p.id !== failedItem.id);
+                        return { success: true };
+                    }
+                    break;
+                case 'audio':
+                    // This would need audio manager integration
+                    if (window.audioManager) {
+                        await window.audioManager.playPokemonCry(failedItem.id);
+                        this.failedAudio = this.failedAudio.filter(p => p.id !== failedItem.id);
+                        return { success: true };
+                    }
+                    break;
+            }
+            return { success: false, error: 'Retry failed' };
+        } catch (error) {
+            console.error(`Error retrying ${failedItem.type} for ${failedItem.name}:`, error);
+            return { success: false, error: error.message };
         }
     }
 

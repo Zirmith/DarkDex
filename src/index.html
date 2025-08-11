@@ -318,6 +318,43 @@
                         </div>
                     </div>
                 </div>
+                <div class="failed-downloads-section" style="margin-top: 24px; display: none;" id="failed-downloads-section">
+                    <div class="failed-downloads-header">
+                        <h4><i class="ri-error-warning-line"></i> Failed Downloads</h4>
+                        <p class="failed-downloads-description">
+                            These items failed to download and can be retried. Failed downloads occur when there are network issues, 
+                            server problems, or missing resources.
+                        </p>
+                    </div>
+                    <div class="failed-downloads-stats" id="failed-downloads-stats">
+                        <div class="failed-stat-item">
+                            <i class="ri-ghost-2-line"></i>
+                            <span class="failed-stat-label">Pokémon Data</span>
+                            <span class="failed-stat-count" id="failed-pokemon-count">0</span>
+                        </div>
+                        <div class="failed-stat-item">
+                            <i class="ri-image-line"></i>
+                            <span class="failed-stat-label">Sprites</span>
+                            <span class="failed-stat-count" id="failed-sprites-count">0</span>
+                        </div>
+                        <div class="failed-stat-item">
+                            <i class="ri-volume-up-line"></i>
+                            <span class="failed-stat-label">Audio</span>
+                            <span class="failed-stat-count" id="failed-audio-count">0</span>
+                        </div>
+                    </div>
+                    <div class="failed-downloads-list" id="failed-downloads-list">
+                        <!-- Failed downloads will be populated here -->
+                    </div>
+                    <div class="failed-downloads-actions">
+                        <button id="retry-all-failed" class="btn-secondary">
+                            <i class="ri-refresh-line"></i> Retry All Failed
+                        </button>
+                        <button id="clear-failed-list" class="btn-secondary">
+                            <i class="ri-delete-bin-line"></i> Clear Failed List
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
