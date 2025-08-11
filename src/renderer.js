@@ -29,9 +29,6 @@ class DarkDexApp {
             // Setup cache management modal
             this.setupCacheManagement();
             
-            // Setup modal controls
-            this.setupModalControls();
-            
             // Setup search functionality
             this.setupSearch();
             
@@ -40,6 +37,9 @@ class DarkDexApp {
             
             // Setup sprite controls
             this.setupSpriteControls();
+            
+            // Setup modal controls
+            this.setupModalControls();
             
             // Setup failed downloads management
             this.setupFailedDownloadsManagement();
@@ -98,6 +98,241 @@ class DarkDexApp {
         }
     }
 
+    setupModalControls() {
+        // Setup Pokemon detail modal
+        const modal = document.getElementById('pokemon-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const cacheModal = document.getElementById('cache-modal');
+        const closeCacheModalBtn = document.getElementById('close-cache-modal');
+        const cacheManagementBtn = document.getElementById('cache-management');
+
+        // Pokemon modal controls
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', () => {
+                if (modal) modal.style.display = 'none';
+            });
+        }
+
+        // Cache modal controls
+        if (closeCacheModalBtn) {
+            closeCacheModalBtn.addEventListener('click', () => {
+                if (cacheModal) cacheModal.style.display = 'none';
+            });
+        }
+
+        if (cacheManagementBtn) {
+            cacheManagementBtn.addEventListener('click', () => {
+                this.showCacheManagement();
+            });
+        }
+
+        // Setup tab switching
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                this.switchTab(tabName);
+            });
+        });
+
+        // Setup modal sprite controls
+        const toggleSpriteType = document.getElementById('toggle-sprite-type');
+        const toggleSpriteStyle = document.getElementById('toggle-sprite-style');
+        const playCryBtn = document.getElementById('play-pokemon-cry');
+
+        if (toggleSpriteType) {
+            toggleSpriteType.addEventListener('click', () => {
+                this.toggleModalSpriteType();
+            });
+        }
+
+        if (toggleSpriteStyle) {
+            toggleSpriteStyle.addEventListener('click', () => {
+                this.toggleModalSpriteStyle();
+            });
+        }
+
+        if (playCryBtn) {
+            playCryBtn.addEventListener('click', () => {
+                if (modal.currentPokemon) {
+                    window.audioManager.playPokemonCry(modal.currentPokemon.id);
+                }
+            });
+        }
+
+        // Close modal when clicking outside
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        if (cacheModal) {
+            cacheModal.addEventListener('click', (e) => {
+                if (e.target === cacheModal) {
+                    cacheModal.style.display = 'none';
+                }
+            });
+        }
+    }
+
+    setupSearch() {
+        const searchInput = document.getElementById('search-input');
+        const clearSearchBtn = document.getElementById('clear-search');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                if (window.searchManager) {
+                    window.searchManager.search(e.target.value);
+                }
+            });
+
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchInput.blur();
+                }
+            });
+        }
+
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', () => {
+                if (searchInput) {
+                    searchInput.value = '';
+                    if (window.searchManager) {
+                        window.searchManager.search('');
+                    }
+                }
+            });
+        }
+    }
+
+    setupFilters() {
+        const generationFilter = document.getElementById('generation-filter');
+        const sortFilter = document.getElementById('sort-filter');
+        const typeFilters = document.querySelectorAll('.type-filter');
+        const clearFiltersBtn = document.getElementById('clear-filters');
+
+        if (generationFilter) {
+            generationFilter.addEventListener('change', (e) => {
+                if (window.searchManager) {
+                    window.searchManager.setGenerationFilter(e.target.value);
+                }
+            });
+        }
+
+        if (sortFilter) {
+            sortFilter.addEventListener('change', (e) => {
+                if (window.searchManager) {
+                    window.searchManager.setSortBy(e.target.value);
+                }
+            });
+        }
+
+        typeFilters.forEach(filter => {
+            filter.addEventListener('click', () => {
+                filter.classList.toggle('active');
+                const activeTypes = Array.from(document.querySelectorAll('.type-filter.active'))
+                    .map(f => f.getAttribute('data-type'));
+                
+                if (window.searchManager) {
+                    window.searchManager.setTypeFilter(activeTypes);
+                }
+            });
+        });
+
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', () => {
+                // Clear generation filter
+                if (generationFilter) generationFilter.value = '';
+                
+                // Clear sort filter
+                if (sortFilter) sortFilter.value = 'id';
+                
+                // Clear type filters
+                typeFilters.forEach(filter => filter.classList.remove('active'));
+                
+                // Clear search
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) searchInput.value = '';
+                
+                // Reset search manager
+                if (window.searchManager) {
+                    window.searchManager.clearAllFilters();
+                }
+            });
+        }
+    }
+
+    setupSpriteControls() {
+        // Sprite controls are already handled in sprites.js
+        // This method exists for consistency and future enhancements
+        console.log('Sprite controls initialized');
+    }
+
+    switchTab(tabName) {
+        // Hide all tab contents
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => {
+            content.style.display = 'none';
+        });
+
+        // Remove active class from all tab buttons
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        tabButtons.forEach(button => {
+            button.classList.remove('active');
+        });
+
+        // Show selected tab content
+        const selectedTab = document.getElementById(`tab-${tabName}`);
+        if (selectedTab) {
+            selectedTab.style.display = 'block';
+        }
+
+        // Add active class to selected tab button
+        const selectedButton = document.querySelector(`[data-tab="${tabName}"]`);
+        if (selectedButton) {
+            selectedButton.classList.add('active');
+        }
+    }
+
+    toggleModalSpriteType() {
+        const modal = document.getElementById('pokemon-modal');
+        const toggleBtn = document.getElementById('toggle-sprite-type');
+        const modalSprite = document.getElementById('modal-pokemon-sprite');
+        
+        if (!modal.currentPokemon || !window.spriteManager) return;
+        
+        const isShiny = toggleBtn.textContent === 'Regular';
+        toggleBtn.textContent = isShiny ? 'Shiny' : 'Regular';
+        
+        window.spriteManager.updateSpriteElement(modalSprite, modal.currentPokemon, {
+            shiny: !isShiny,
+            useShowdown: true
+        });
+    }
+
+    toggleModalSpriteStyle() {
+        const modal = document.getElementById('pokemon-modal');
+        const toggleBtn = document.getElementById('toggle-sprite-style');
+        const modalSprite = document.getElementById('modal-pokemon-sprite');
+        
+        if (!modal.currentPokemon || !window.spriteManager) return;
+        
+        const isStatic = toggleBtn.textContent === 'Static';
+        toggleBtn.textContent = isStatic ? 'Animated' : 'Static';
+        
+        const isShiny = document.getElementById('toggle-sprite-type').textContent === 'Shiny';
+        
+        window.spriteManager.updateSpriteElement(modalSprite, modal.currentPokemon, {
+            animated: !isStatic,
+            shiny: isShiny,
+            useShowdown: true
+        });
+    }
+
     setupCacheManagement() {
         const cacheBtn = document.getElementById('cache-btn');
         if (cacheBtn) {
@@ -105,9 +340,48 @@ class DarkDexApp {
                 this.showCacheManagement();
             });
         }
-        
-        // Setup failed downloads management
-        this.setupFailedDownloadsManagement();
+
+        // Setup cache action buttons
+        const clearDataCacheBtn = document.getElementById('clear-data-cache');
+        const clearSpriteCacheBtn = document.getElementById('clear-sprite-cache');
+        const clearAudioCacheBtn = document.getElementById('clear-audio-cache');
+        const clearAllCacheBtn = document.getElementById('clear-all-cache');
+
+        if (clearDataCacheBtn) {
+            clearDataCacheBtn.addEventListener('click', async () => {
+                if (confirm('Clear all Pokemon data cache? This will require re-downloading Pokemon data.')) {
+                    await this.clearCache('data');
+                    this.showCacheManagement(); // Refresh the modal
+                }
+            });
+        }
+
+        if (clearSpriteCacheBtn) {
+            clearSpriteCacheBtn.addEventListener('click', async () => {
+                if (confirm('Clear all sprite cache? This will require re-downloading sprites.')) {
+                    await this.clearCache('sprites');
+                    this.showCacheManagement(); // Refresh the modal
+                }
+            });
+        }
+
+        if (clearAudioCacheBtn) {
+            clearAudioCacheBtn.addEventListener('click', async () => {
+                if (confirm('Clear all audio cache? This will require re-downloading audio files.')) {
+                    await this.clearCache('audio');
+                    this.showCacheManagement(); // Refresh the modal
+                }
+            });
+        }
+
+        if (clearAllCacheBtn) {
+            clearAllCacheBtn.addEventListener('click', async () => {
+                if (confirm('Clear ALL cache? This will require re-downloading everything and may take a while to reload.')) {
+                    await this.clearCache('all');
+                    this.showCacheManagement(); // Refresh the modal
+                }
+            });
+        }
     }
 
     async showCacheManagement() {
