@@ -96,27 +96,6 @@ class SearchManager {
                 this.showCacheManagement();
             });
         }
-
-        // Retry failed downloads button
-        const retryFailed = document.getElementById('retry-failed');
-        if (retryFailed) {
-            retryFailed.addEventListener('click', () => {
-                if (window.darkdexApp) {
-                    window.darkdexApp.showRetryModal();
-                }
-            });
-        }
-
-        // Play Pokemon cry button
-        const playPokemonCry = document.getElementById('play-pokemon-cry');
-        if (playPokemonCry) {
-            playPokemonCry.addEventListener('click', () => {
-                const modal = document.getElementById('pokemon-modal');
-                if (modal && modal.currentPokemon && window.audioManager) {
-                    window.audioManager.playPokemonCry(modal.currentPokemon.id);
-                }
-            });
-        }
     }
 
     applyFilters() {
@@ -286,18 +265,49 @@ class SearchManager {
         return card;
     }
 
-    showPokemonModal(pokemon) {
-        const modal = document.getElementById('pokemon-modal');
-        if (!modal) return;
+    async showPokemonModal(pokemon) {
+        try {
+            // Validate pokemon data
+            if (!pokemon || !pokemon.id) {
+                console.error('Invalid pokemon data provided to modal');
+                return;
+            }
+            
+            const modal = document.getElementById('pokemon-modal');
+            if (!modal) return;
 
-        modal.currentPokemon = pokemon;
-        modal.style.display = 'block';
+            // Store current pokemon for reference
+            modal.currentPokemon = pokemon;
 
-        // Update modal content
-        this.updateModalContent(pokemon);
+            // Get complete pokemon data
+            let completePokemon;
+            try {
+                completePokemon = await window.pokemonAPI.getCompletePokemonData(pokemon.name || pokemon.id);
+            } catch (error) {
+                console.error(`Error loading complete data for ${pokemon.name}:`, error);
+                // Use the basic pokemon data we have
+                completePokemon = pokemon;
+            }
+            
+            if (completePokemon) {
+                modal.currentPokemon = completePokemon;
+            }
 
-        // Setup modal event listeners
-        this.setupModalEventListeners();
+            // Update modal content
+            this.updateModalContent(modal.currentPokemon);
+
+            // Show modal
+            modal.style.display = 'flex';
+        } catch (error) {
+            console.error(`Error showing Pokemon modal for ${pokemon.name}:`, error);
+            // Show a basic modal with available data
+            const modal = document.getElementById('pokemon-modal');
+            if (modal) {
+                modal.currentPokemon = pokemon;
+                this.updateModalContent(pokemon);
+                modal.style.display = 'flex';
+            }
+        }
     }
 
     updateModalContent(pokemon) {
