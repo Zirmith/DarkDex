@@ -1,382 +1,495 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DarkDex Updater</title>
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
   <style>
-    /* Reset */
+    /* Reset & base */
     *, *::before, *::after {
       box-sizing: border-box;
     }
     body {
       margin: 0; padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: radial-gradient(circle at center, #111 0%, #0a0a0a 100%);
-      color: #ddd;
-      user-select: none;
+      font-family: 'Exo 2', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0b0218 0%, #2a0034 100%);
+      color: #e5e0ff;
       height: 100vh;
+      overflow: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 20px;
-      overflow: hidden;
+      user-select: none;
+      position: relative;
     }
 
-    /* Card container */
+    /* Flickering scanline overlay */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255 255 255 / 0.03) 0px,
+          rgba(255 255 255 / 0.03) 1px,
+          transparent 1px,
+          transparent 3px
+        );
+      animation: flicker 4s infinite;
+      z-index: 1000;
+      mix-blend-mode: screen;
+    }
+
+    @keyframes flicker {
+      0%, 100% {opacity: 0.04;}
+      50% {opacity: 0.08;}
+    }
+
+    /* Container card */
     .installer-card {
       position: relative;
-      background: rgba(20, 14, 42, 0.98);
-      width: 480px;
+      width: 500px;
       max-width: 95vw;
-      border-radius: 18px;
+      background: rgba(15, 5, 35, 0.75);
+      border-radius: 24px;
+      border: 1px solid #8a2be299;
       box-shadow:
-        0 0 15px rgba(138, 43, 226, 0.5),
-        0 0 40px rgba(138, 43, 226, 0.7);
-      border: 1px solid rgba(138, 43, 226, 0.35);
-      padding: 36px 48px 48px;
+        0 0 35px 2px #8a2be2cc,
+        inset 0 0 30px 6px #6700bbcc,
+        inset 0 0 100px 16px #4b008266;
+      backdrop-filter: blur(18px);
+      padding: 48px 54px 56px;
+      color: #d0c8ff;
       overflow: hidden;
       user-select: text;
-      color: #ccc;
-      transition: box-shadow 0.4s ease;
+      transition: box-shadow 0.45s ease;
     }
     .installer-card:hover {
       box-shadow:
-        0 0 30px rgba(138, 43, 226, 0.7),
-        0 0 60px rgba(138, 43, 226, 0.9);
+        0 0 55px 4px #b154ffcc,
+        inset 0 0 50px 10px #8a2be2cc,
+        inset 0 0 140px 20px #7200ff77;
     }
 
-    /* Header */
+    /* Header flex */
     .header {
       display: flex;
       align-items: center;
-      gap: 22px;
-      margin-bottom: 32px;
+      gap: 28px;
+      margin-bottom: 38px;
+      user-select: none;
     }
     .lugia-container {
       position: relative;
-      width: 110px;
-      height: 110px;
+      width: 120px;
+      height: 120px;
       flex-shrink: 0;
+      filter: drop-shadow(0 0 20px #b154ffcc);
+      animation: lugia-glow 3.5s ease-in-out infinite;
     }
     .updater-lugia {
       width: 100%;
       height: 100%;
       object-fit: contain;
-      filter: drop-shadow(0 0 18px rgba(138, 43, 226, 0.85));
-      animation: float 4s ease-in-out infinite;
-      position: relative;
-      z-index: 10;
       user-select: none;
+      border-radius: 18px;
+      border: 2px solid #b154ffaa;
+      box-shadow:
+        0 0 16px 3px #b154ffaa,
+        0 0 28px 8px #c168ffcc;
+      transition: filter 0.4s ease;
+      filter: drop-shadow(0 0 18px #b154ffbb);
+      animation: float 4.5s ease-in-out infinite;
     }
+    .updater-lugia:hover {
+      filter: drop-shadow(0 0 28px #d07cffdd);
+      transform: translateY(-3px) scale(1.05);
+    }
+
+    /* Shadow aura neon flicker */
     .shadow-aura {
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
-      width: 190px;
-      height: 190px;
-      background: radial-gradient(circle, rgba(138, 43, 226, 0.33) 0%, transparent 72%);
+      width: 200px;
+      height: 200px;
       border-radius: 50%;
-      animation: pulse 3.5s ease-in-out infinite;
-      filter: blur(12px);
+      transform: translate(-50%, -50%);
+      background:
+        radial-gradient(circle, #b154ffcc 0%, transparent 75%);
+      filter: blur(18px);
+      animation: pulse-flicker 3s ease-in-out infinite;
+      pointer-events: none;
       z-index: 1;
     }
+
+    /* Title text */
     .title-container {
       flex-grow: 1;
       user-select: text;
+      max-width: 70%;
     }
     .updater-title {
-      font-size: 2.6rem;
+      font-size: 3rem;
       font-weight: 900;
       margin: 0;
-      background: linear-gradient(45deg, #8a2be2, #4b0082, #9370db);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-shadow: 0 0 28px rgba(138, 43, 226, 0.55);
-      letter-spacing: 1.3px;
-      transition: background-position 1.5s ease;
+      letter-spacing: 0.12em;
+      color: #e9d4ff;
+      text-shadow:
+        0 0 8px #d682ff,
+        0 0 14px #af5fff,
+        0 0 30px #bb70ff;
+      font-family: 'Exo 2', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
     }
     .updater-subtitle {
-      margin-top: 8px;
-      font-size: 1.15rem;
-      color: #b8b8b8;
+      margin-top: 6px;
+      font-size: 1.3rem;
       font-weight: 500;
-      letter-spacing: 0.04em;
+      color: #d1c6ffcc;
+      letter-spacing: 0.05em;
+      user-select: none;
+      font-style: italic;
+      filter: drop-shadow(0 0 6px #b154ff88);
     }
 
-    /* Steps tracker */
+    /* Steps bar */
     .steps {
       display: flex;
       justify-content: space-between;
-      margin: 32px 0 26px;
+      margin: 36px 0 30px;
       user-select: none;
     }
     .step {
       flex-grow: 1;
       position: relative;
       text-align: center;
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: #666;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #7d56a8aa;
+      letter-spacing: 0.1em;
       cursor: default;
-      padding: 0 6px;
-      letter-spacing: 0.06em;
+      padding: 0 4px;
       text-transform: uppercase;
       transition:
-        color 0.35s ease,
-        transform 0.3s ease;
+        color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+        text-shadow 0.4s ease,
+        transform 0.35s ease;
+      user-select: none;
+      filter: drop-shadow(0 0 2px #33005f33);
     }
     .step:not(:last-child)::after {
-      content: '';
+      content: "";
       position: absolute;
       top: 50%;
       right: 0;
       width: 100%;
       height: 4px;
-      background: #3e2c6a;
-      transform: translateX(50%);
       border-radius: 2.5px;
+      background: #35004a88;
+      transform: translateX(50%);
+      box-shadow: 0 0 5px #4b0076bb inset;
       transition: background-color 0.35s ease;
       z-index: -1;
     }
     .step.active {
-      color: #a380f0;
-      transform: scale(1.07);
-      font-weight: 700;
+      color: #e49affee;
+      filter: drop-shadow(0 0 15px #ff5ce8aa);
+      transform: scale(1.12);
+      text-shadow:
+        0 0 8px #e766ffa8,
+        0 0 20px #ff53ccaa;
     }
     .step.active::after {
-      background: linear-gradient(90deg, #8a2be2, #4b0082);
-      box-shadow: 0 0 15px rgba(138, 43, 226, 0.8);
+      background: linear-gradient(90deg, #d868ff, #ff4bdb);
+      box-shadow: 0 0 16px 2px #f443ffa5;
     }
     .step.completed {
-      color: #4ade80;
-      font-weight: 700;
+      color: #7fffbfff;
+      filter: drop-shadow(0 0 14px #57ffafbb);
     }
     .step.completed::after {
-      background: #4ade80;
-      box-shadow: 0 0 15px #4ade80;
+      background: #30ffa5cc;
+      box-shadow: 0 0 14px #30ffa5cc;
     }
 
-    /* Update info */
-    .update-info {
-      background: rgba(255, 255, 255, 0.07);
-      border: 1.5px solid rgba(138, 43, 226, 0.35);
-      border-radius: 16px;
-      padding: 28px 34px;
-      font-size: 1rem;
-      line-height: 1.45;
-      color: #d1d5db;
-      min-height: 120px;
-      user-select: text;
-      box-shadow: inset 0 0 10px rgba(138, 43, 226, 0.15);
-      transition: background 0.4s ease;
-    }
-    .update-item {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 12px 0;
-      color: #c0bde5;
-      opacity: 0;
-      transform: translateY(12px);
-      animation: fadeUp 0.5s forwards;
-    }
-    .update-item:nth-child(1) {
-      animation-delay: 0.15s;
-    }
-    .update-item:nth-child(2) {
-      animation-delay: 0.3s;
-    }
-    .update-item:nth-child(3) {
-      animation-delay: 0.45s;
-    }
-    .update-item i {
-      color: #8a2be2;
-      font-size: 1.3rem;
-      min-width: 26px;
-      text-align: center;
-    }
-
-    /* Status */
+    /* Update status */
     .update-status {
       display: flex;
-      align-items: center;
-      gap: 16px;
-      font-size: 1.25rem;
-      margin-bottom: 18px;
       justify-content: center;
+      align-items: center;
+      gap: 20px;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #c5aaffcc;
+      margin-bottom: 26px;
       user-select: none;
-      font-weight: 700;
-      color: #aaa;
-      min-height: 32px;
+      filter: drop-shadow(0 0 6px #8a2be2bb);
       transition: color 0.4s ease;
     }
     .update-status.available {
-      color: #4ade80;
+      color: #90f3a5dd;
+      filter: drop-shadow(0 0 10px #72f1a533);
     }
     .update-status.up-to-date {
-      color: #60a5fa;
+      color: #80b2ffdd;
+      filter: drop-shadow(0 0 10px #528effbb);
     }
     .update-status.error {
-      color: #f87171;
+      color: #ff7676cc;
+      filter: drop-shadow(0 0 10px #ff3f3fcc);
     }
-    /* Icon animation only when loading */
+
+    /* Icon spin only when loading */
     .ri-loader-4-line {
-      animation: spin 1.6s linear infinite;
+      animation: spin 1.7s linear infinite;
+      filter: drop-shadow(0 0 8px #b154ffcc);
+      font-size: 2rem;
+      user-select: none;
+    }
+
+    .ri-check-line, .ri-error-warning-line, .ri-download-cloud-line, .ri-download-line {
+      font-size: 2.4rem;
+      user-select: none;
+      transition: filter 0.3s ease;
+      filter: drop-shadow(0 0 12px #8a2be2cc);
+    }
+
+    /* Update details with fade */
+    .update-info {
+      background: rgba(40, 10, 60, 0.7);
+      border-radius: 20px;
+      padding: 20px 26px;
+      box-shadow:
+        0 0 14px 1px #aa6fffcc,
+        inset 0 0 32px 2px #7225b9cc;
+      margin-bottom: 30px;
+      font-size: 1rem;
+      user-select: text;
+      line-height: 1.4;
+      max-height: 180px;
+      overflow-y: auto;
+      color: #dbd4ffcc;
+      opacity: 0;
+      animation: fadeUp 0.5s forwards;
+      animation-delay: 0.12s;
+      transition: opacity 0.4s ease;
+      scrollbar-width: thin;
+      scrollbar-color: #985fff44 transparent;
+    }
+    .update-info::-webkit-scrollbar {
+      width: 8px;
+    }
+    .update-info::-webkit-scrollbar-thumb {
+      background: #985fff66;
+      border-radius: 6px;
+      box-shadow: inset 0 0 8px #9a69ff99;
+      transition: background 0.25s ease;
+    }
+    .update-info::-webkit-scrollbar-thumb:hover {
+      background: #c783ffbb;
+    }
+
+    .update-item {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 16px;
+      user-select: text;
+      opacity: 0;
+      animation: fadeUp 0.4s forwards;
+      animation-fill-mode: forwards;
+    }
+    .update-item i {
+      color: #b776ffdd;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      user-select: none;
+      filter: drop-shadow(0 0 12px #bb7dffdd);
+    }
+    .update-item span {
+      flex-grow: 1;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      user-select: text;
+      line-height: 1.3;
+      text-shadow: 0 0 8px #bb7dffdd;
+    }
+
+    /* Buttons */
+    .update-actions {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 8px;
+    }
+    .btn {
+      background: linear-gradient(135deg, #ab4fff, #6f2aff);
+      border: none;
+      border-radius: 30px;
+      color: white;
+      font-weight: 700;
+      font-size: 1.1rem;
+      padding: 14px 34px;
+      box-shadow:
+        0 0 18px #bd66ffcc,
+        0 5px 12px -1px #7000ffcc;
+      cursor: pointer;
+      transition:
+        transform 0.3s cubic-bezier(0.4,0,0.2,1),
+        box-shadow 0.4s ease;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      filter: drop-shadow(0 0 12px #b154ffdd);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn i {
+      font-size: 1.4rem;
+      line-height: 1;
+      filter: drop-shadow(0 0 8px #ffa2ffcc);
+      transition: filter 0.3s ease;
+    }
+    .btn:hover, .btn:focus-visible {
+      transform: translateY(-4px);
+      box-shadow:
+        0 0 28px #d87dffcc,
+        0 7px 16px -1px #bc7cffcc;
+      outline: none;
+    }
+    .btn-primary {
+      background: linear-gradient(45deg, #8a2be2, #db46ff);
+      box-shadow:
+        0 0 20px #db46ffcc,
+        0 0 32px 8px #9d29ffcc,
+        inset 0 0 15px 6px #bd66ffcc;
+    }
+    .btn-secondary {
+      background: transparent;
+      border: 2px solid #b154ffcc;
+      color: #b154ffcc;
+      box-shadow: inset 0 0 6px #8a2be2cc;
+      transition: all 0.35s ease;
+    }
+    .btn-secondary:hover, .btn-secondary:focus-visible {
+      background: #b154ff22;
+      border-color: #ff8cffcc;
+      color: #ff94ffcc;
+      box-shadow:
+        0 0 18px #ff8cffcc,
+        inset 0 0 12px #ff7fffcc;
     }
 
     /* Progress bar */
     .progress-bar {
       width: 100%;
-      height: 12px;
-      background: rgba(255, 255, 255, 0.12);
-      border-radius: 6px;
+      height: 10px;
+      background: #3a085a33;
+      border-radius: 14px;
       overflow: hidden;
-      margin-bottom: 16px;
-      box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.25);
-      transition: background 0.3s ease;
+      box-shadow:
+        inset 0 0 18px 4px #7e2aff55;
+      margin-bottom: 12px;
+      position: relative;
     }
     .progress-fill {
       height: 100%;
-      width: 0;
-      background: linear-gradient(90deg, #8a2be2, #4b0082);
-      box-shadow: 0 0 18px rgba(138, 43, 226, 0.85);
-      transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 6px;
-      background-size: 200% 100%;
-      animation: loading-stripes 1.6s linear infinite;
+      background: linear-gradient(270deg, #db46ff, #8a2be2);
+      width: 0%;
+      box-shadow:
+        0 0 22px 2px #e85cffbb,
+        inset 0 0 16px 4px #bd46ffcc;
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+      position: relative;
+      overflow: hidden;
     }
-    @keyframes loading-stripes {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
+    .progress-fill::before {
+      content: "";
+      position: absolute;
+      top: 0; left: -40%;
+      width: 40%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        rgba(255 255 255 / 0.3),
+        rgba(255 255 255 / 0.12),
+        rgba(255 255 255 / 0.3)
+      );
+      animation: sheen 2.6s linear infinite;
+      pointer-events: none;
+      filter: drop-shadow(0 0 10px #e35bffaa);
+      border-radius: 14px;
+      mix-blend-mode: screen;
+    }
+    @keyframes sheen {
+      100% { left: 100%; }
     }
     .progress-text {
-      text-align: center;
       font-size: 1rem;
-      color: #b8b8b8;
       font-weight: 600;
+      color: #d0bbffcc;
+      text-align: center;
       user-select: none;
-      margin-top: -6px;
-      margin-bottom: 14px;
-      letter-spacing: 0.04em;
+      text-shadow: 0 0 12px #bb79ffbb;
+      letter-spacing: 0.08em;
     }
 
-    /* Buttons */
-    .update-actions {
-      margin-top: 34px;
-      display: flex;
-      justify-content: center;
-      gap: 22px;
-      user-select: none;
-    }
-    .btn {
-      padding: 16px 36px;
-      border-radius: 12px;
-      border: none;
-      font-weight: 800;
-      font-size: 1.1rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      transition:
-        box-shadow 0.35s ease,
-        transform 0.25s ease,
-        background-color 0.3s ease,
-        color 0.3s ease;
-      user-select: none;
-      box-shadow: 0 0 12px rgba(0,0,0,0.18);
-      color: white;
-      background: linear-gradient(45deg, #8a2be2, #4b0082);
-      text-shadow: 0 0 8px rgba(0,0,0,0.3);
-      filter: drop-shadow(0 0 4px rgba(138, 43, 226, 0.7));
-    }
-    .btn:hover,
-    .btn:focus-visible {
-      box-shadow: 0 0 25px rgba(138, 43, 226, 0.85);
-      transform: translateY(-4px);
-      outline: none;
-    }
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.12);
-      color: #d1d5db;
-      border: 1.8px solid rgba(255, 255, 255, 0.3);
-      filter: none;
-      text-shadow: none;
-      box-shadow: none;
-      transition:
-        background-color 0.35s ease,
-        color 0.35s ease,
-        border-color 0.35s ease;
-    }
-    .btn-secondary:hover,
-    .btn-secondary:focus-visible {
-      background: rgba(255, 255, 255, 0.3);
-      color: white;
-      border-color: rgba(138, 43, 226, 0.85);
-      box-shadow: 0 0 18px rgba(138, 43, 226, 0.7);
-      outline: none;
-      transform: translateY(-3px);
-      cursor: pointer;
-    }
-
-    /* Animations */
+    /* Stepper animations */
     @keyframes spin {
       100% { transform: rotate(360deg); }
     }
     @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-14px); }
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-      50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+    @keyframes pulse-flicker {
+      0%, 100% {
+        opacity: 0.6;
+        filter: drop-shadow(0 0 18px #d870ffbb);
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 28px #ff94ffcc);
+        transform: translate(-50%, -50%) scale(1.1);
+      }
     }
     @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
       to {
         opacity: 1;
         transform: translateY(0);
       }
-      from {
-        opacity: 0;
-        transform: translateY(12px);
-      }
     }
 
-    /* Particles background */
-    .particles {
-      pointer-events: none;
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      overflow: hidden;
-      z-index: 0;
+    /* Accessibility focus */
+    button:focus-visible {
+      outline: 2px solid #d87dffcc;
+      outline-offset: 3px;
     }
-    .particle {
-      position: absolute;
-      background: rgba(138, 43, 226, 0.25);
-      border-radius: 50%;
-      opacity: 0.8;
-      animation: float-particle linear infinite;
-      filter: drop-shadow(0 0 4px rgba(138,43,226,0.4));
-      pointer-events: none;
-      will-change: transform;
-    }
-    /* Generate random sizes and speeds for particles */
+
   </style>
 </head>
 <body>
-  <div class="installer-card" role="main" aria-label="DarkDex Updater">
-    <div class="header">
+  <main class="installer-card" role="main" aria-label="DarkDex Updater">
+    <header class="header">
       <div class="lugia-container" aria-hidden="true">
         <img
           src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/249.gif"
-          alt=""
+          alt="Shadow Lugia"
           class="updater-lugia"
           draggable="false"
+          loading="lazy"
+          decoding="async"
         />
         <div class="shadow-aura"></div>
       </div>
@@ -384,7 +497,7 @@
         <h1 class="updater-title">DarkDex Updater</h1>
         <p class="updater-subtitle">Shadow Database Update System</p>
       </div>
-    </div>
+    </header>
 
     <nav class="steps" aria-label="Update steps">
       <div class="step" id="step-check">Checking</div>
@@ -419,14 +532,12 @@
       </div>
       <div class="progress-text" id="progress-text" aria-live="polite" aria-atomic="true"></div>
     </div>
-  </div>
-
-  <div class="particles" aria-hidden="true"></div>
+  </main>
 
   <script>
     const { ipcRenderer } = require('electron');
 
-    // DOM references
+    // DOM refs
     const statusIcon = document.getElementById('status-icon');
     const statusText = document.getElementById('status-text');
     const updateStatus = document.getElementById('update-status');
@@ -441,7 +552,7 @@
       check: document.getElementById('step-check'),
       download: document.getElementById('step-download'),
       install: document.getElementById('step-install'),
-      finish: document.getElementById('step-finish')
+      finish: document.getElementById('step-finish'),
     };
 
     function clearStepClasses() {
@@ -453,156 +564,9 @@
       clearStepClasses();
       if (completed) {
         steps[name].classList.add('completed');
-        // Mark previous steps completed
         const order = ['check', 'download', 'install', 'finish'];
         const idx = order.indexOf(name);
         for (let i = 0; i < idx; i++) {
           steps[order[i]].classList.add('completed');
         }
-      } else {
-        steps[name].classList.add('active');
       }
-    }
-
-    // Update UI function
-    function updateUI(data) {
-      // Reset visibility & classes
-      updateDetails.style.display = 'none';
-      updateActions.style.display = 'none';
-      progressBar.style.display = 'none';
-      progressText.style.display = 'none';
-      statusIcon.className = '';
-      updateStatus.className = 'update-status';
-      statusText.textContent = '';
-
-      switch (data.status) {
-        case 'checking':
-          setStep('check');
-          statusIcon.className = 'ri-loader-4-line';
-          statusText.textContent = 'Checking for updates...';
-          break;
-        case 'available':
-          setStep('download');
-          statusIcon.className = 'ri-download-cloud-line available';
-          statusText.textContent = 'Update Available!';
-          showUpdateDetails(data.updateInfo);
-          updateActions.style.display = 'flex';
-          updateBtn.style.display = 'flex';
-          skipBtn.style.display = 'flex';
-          break;
-        case 'up-to-date':
-          setStep('finish', true);
-          statusIcon.className = 'ri-check-line up-to-date';
-          statusText.textContent = 'DarkDex is up to date';
-          setTimeout(() => {
-            ipcRenderer.send('skip-update');
-          }, 2000);
-          break;
-        case 'error':
-          setStep('check');
-          statusIcon.className = 'ri-error-warning-line error';
-          statusText.textContent = 'Update check failed';
-          showErrorDetails(data.error);
-          updateActions.style.display = 'flex';
-          updateBtn.style.display = 'none';
-          skipBtn.textContent = 'Continue';
-          skipBtn.style.display = 'flex';
-          break;
-        case 'downloading':
-          setStep('download');
-          statusIcon.className = 'ri-download-line';
-          statusText.textContent = 'Downloading update...';
-          progressBar.style.display = 'block';
-          progressText.style.display = 'block';
-          break;
-        case 'installing':
-          setStep('install');
-          statusIcon.className = 'ri-loader-4-line';
-          statusText.textContent = 'Installing update...';
-          progressBar.style.display = 'block';
-          progressText.style.display = 'block';
-          break;
-        case 'complete':
-          setStep('finish', true);
-          statusIcon.className = 'ri-check-line up-to-date';
-          statusText.textContent = 'Update complete! Restarting...';
-          progressBar.style.display = 'none';
-          progressText.style.display = 'none';
-          break;
-        default:
-          statusIcon.className = 'ri-question-line';
-          statusText.textContent = 'Unknown status...';
-          break;
-      }
-    }
-
-    function showUpdateDetails(updateInfo) {
-      updateDetails.style.display = 'block';
-      updateDetails.innerHTML = `
-        <div class="update-item" style="animation-delay: 0.15s;">
-          <i class="ri-file-list-3-line"></i>
-          <span>Files to update: ${updateInfo.files ? updateInfo.files.length : 'Unknown'}</span>
-        </div>
-        <div class="update-item" style="animation-delay: 0.3s;">
-          <i class="ri-time-line"></i>
-          <span>Last updated: ${updateInfo.lastUpdate || 'Unknown'}</span>
-        </div>
-        <div class="update-item" style="animation-delay: 0.45s;">
-          <i class="ri-information-line"></i>
-          <span>New features and bug fixes available</span>
-        </div>
-      `;
-    }
-
-    function showErrorDetails(error) {
-      updateDetails.style.display = 'block';
-      updateDetails.innerHTML = `
-        <div class="update-item" style="animation-delay: 0.15s;">
-          <i class="ri-error-warning-line"></i>
-          <span>Error: ${error || 'Unknown error occurred'}</span>
-        </div>
-        <div class="update-item" style="animation-delay: 0.3s;">
-          <i class="ri-information-line"></i>
-          <span>You can continue using DarkDex normally</span>
-        </div>
-      `;
-    }
-
-    // Button event listeners
-    updateBtn.addEventListener('click', () => {
-      ipcRenderer.send('start-update');
-      updateActions.style.display = 'none';
-      progressBar.style.display = 'block';
-      progressText.style.display = 'block';
-    });
-    skipBtn.addEventListener('click', () => {
-      ipcRenderer.send('skip-update');
-    });
-
-    // Init
-    window.addEventListener('DOMContentLoaded', () => {
-      ipcRenderer.send('check-for-updates');
-    });
-
-    // Bonus: particles effect
-    const particlesContainer = document.querySelector('.particles');
-    const particleCount = 30;
-    const particles = [];
-
-    function createParticle() {
-      const p = document.createElement('div');
-      p.classList.add('particle');
-      p.style.width = p.style.height = `${Math.random() * 6 + 3}px`;
-      p.style.left = `${Math.random() * 100}vw`;
-      p.style.top = `${Math.random() * 100}vh`;
-      p.style.animationDuration = `${Math.random() * 20 + 10}s`;
-      p.style.animationDelay = `${Math.random() * 20}s`;
-      particlesContainer.appendChild(p);
-      particles.push(p);
-    }
-    for (let i = 0; i < particleCount; i++) {
-      createParticle();
-    }
-  </script>
-</body>
-</html>
