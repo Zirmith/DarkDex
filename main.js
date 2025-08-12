@@ -5,6 +5,8 @@ const axios = require('axios');
 const crypto = require('crypto');
 
 let mainWindow;
+let updaterWindow;
+let updaterWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -54,6 +56,59 @@ function createWindow() {
   });
 }
 
+function createUpdaterWindow() {
+  updaterWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    frame: false,
+    resizable: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      enableRemoteModule: true
+    },
+    icon: path.join(__dirname, 'assets/icon.png'),
+    show: false,
+    alwaysOnTop: true
+  });
+
+  updaterWindow.loadFile('src/updater.html');
+
+  updaterWindow.once('ready-to-show', () => {
+    updaterWindow.show();
+  });
+
+  updaterWindow.on('closed', () => {
+    updaterWindow = null;
+  });
+}
+
+function createUpdaterWindow() {
+  updaterWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    frame: false,
+    resizable: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      enableRemoteModule: true
+    },
+    icon: path.join(__dirname, 'assets/icon.png'),
+    show: false,
+    alwaysOnTop: true
+  });
+
+  updaterWindow.loadFile('src/updater.html');
+
+  updaterWindow.once('ready-to-show', () => {
+    updaterWindow.show();
+  });
+
+  updaterWindow.on('closed', () => {
+    updaterWindow = null;
+  });
+}
 
 // ====== GitHub Update + Backup ======
 
@@ -116,7 +171,7 @@ function copyFolderRecursiveSync(source, target) {
 }
 
 // Auto-update src folder
-async function updateSrcFromGitHub() {
+async function checkForUpdates() {
   const owner = 'Zirmith';
   const repo = 'DarkDex';
   const branch = 'main';
@@ -124,16 +179,19 @@ async function updateSrcFromGitHub() {
 
   try {
     console.log('Checking for updates...');
-    const files = await fetchGitHubFiles(owner, repo, branch, srcFolder);
-
-    let updatedFiles = [];
-
-    // Backup before updating
-    const backupPath = backupSrcFolder();
-    if (backupPath) {
-      console.log(`Backup created at: ${backupPath}`);
+    if (updaterWindow) {
+      updaterWindow.webContents.send('update-status', { status: 'checking' });
     }
+    
+    if (updaterWindow) {
+      updaterWindow.webContents.send('update-status', { status: 'checking' });
+    }
+    
+    const files = await fetchGitHubFiles(owner, repo, branch, srcFolder);
+    let updatedFiles = [];
+    let hasUpdates = false;
 
+    // Check which files need updating without actually updating them
     for (const file of files) {
       const localPath = path.join(__dirname, file);
       const remoteContent = await downloadGitHubFile(owner, repo, branch, file);
@@ -146,25 +204,329 @@ async function updateSrcFromGitHub() {
       }
 
       if (remoteHash !== localHash) {
-        fs.mkdirSync(path.dirname(localPath), { recursive: true });
-        fs.writeFileSync(localPath, remoteContent, 'utf8');
         updatedFiles.push(file);
+        hasUpdates = true;
       }
     }
 
-    if (updatedFiles.length > 0) {
-      console.log(`Updated files: ${updatedFiles.join(', ')}`);
-      dialog.showMessageBox({
-        type: 'info',
-        message: 'DarkDex has been updated. Please restart the app to apply changes.'
-      });
+    if (hasUpdates) {
+      console.log(`Updates available for: ${updatedFiles.join(', ')}`);
+      if (updaterWindow) {
+        updaterWindow.webContents.send('update-status', { 
+          status: 'available',
+          updateInfo: {
+            files: updatedFiles,
+            lastUpdate: new Date().toISOString()
+          }
+        });
+            files: updatedFiles,
+            lastUpdate: new Date().toISOString()
+          }
+        });
+      }
     } else {
       console.log('No updates found.');
+      if (updaterWindow) {
+        updaterWindow.webContents.send('update-status', { status: 'up-to-date' });
+      }
     }
+    
+    return { hasUpdates, files: updatedFiles };
   } catch (err) {
-    console.error('Update failed:', err.message);
+    console.error('Update check failed:', err.message);
+    if (updaterWindow) {
+      updaterWindow.webContents.send('update-status', { 
+        status: 'error', 
+        error: err.message 
+      });
+    }
+    return { hasUpdates: false, files: [], error: err.message };
   }
 }
+
+async function performUpdate(filesToUpdate) {
+  const owner = 'Zirmith';
+  const repo = 'DarkDex';
+  const branch = 'main';
+  
+  try {
+    if (updaterWindow) {
+      updaterWindow.webContents.send('update-status', { status: 'downloading' });
+    }
+    
+    // Backup before updating
+    const backupPath = backupSrcFolder();
+    if (backupPath) {
+      console.log(`Backup created at: ${backupPath}`);
+    }
+
+    let completedFiles = 0;
+    const totalFiles = filesToUpdate.length;
+
+    for (const file of filesToUpdate) {
+      const localPath = path.join(__dirname, file);
+      const remoteContent = await downloadGitHubFile(owner, repo, branch, file);
+      
+      fs.mkdirSync(path.dirname(localPath), { recursive: true });
+      fs.writeFileSync(localPath, remoteContent, 'utf8');
+      
+      completedFiles++;
+      const progress = Math.round((completedFiles / totalFiles) * 100);
+      
+      if (updaterWindow) {
+        updaterWindow.webContents.send('update-progress', {
+          percent: progress,
+          message: `Updating ${path.basename(file)}... (${completedFiles}/${totalFiles})`
+        });
+      }
+      
+      // Small delay to show progress
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    } else {
+      console.log('No updates found.');
+      if (updaterWindow) {
+        updaterWindow.webContents.send('update-status', { status: 'up-to-date' });
+    setTimeout(() => {
+  } catch (error) {
+    
+    return { hasUpdates, files: updatedFiles };
+    console.error('Update failed:', error.message);
+    if (updaterWindow) {
+      updaterWindow.webContents.send('update-status', { 
+        status: 'error', 
+        error: error.message 
+      });
+    }
+  }
+}
+
+// IPC handlers for updater
+ipcMain.on('check-for-updates', async () => {
+  await checkForUpdates();
+});
+
+ipcMain.on('start-update', async () => {
+  const updateCheck = await checkForUpdates();
+  if (updateCheck.hasUpdates) {
+    await performUpdate(updateCheck.files);
+  }
+});
+
+ipcMain.on('skip-update', () => {
+  if (updaterWindow) {
+    updaterWindow.close();
+  }
+  // Continue with normal app startup
+  if (!mainWindow) {
+    createWindow();
+  }
+});
+
+// Show updater window and check for updates
+async function showUpdaterAndCheck() {
+  createUpdaterWindow();
+  
+  // Wait a moment for the updater window to be ready
+  setTimeout(async () => {
+    const updateResult = await checkForUpdates();
+    
+    // If no updates and no error, automatically continue after a delay
+    if (!updateResult.hasUpdates && !updateResult.error) {
+      setTimeout(() => {
+        if (updaterWindow) {
+          updaterWindow.close();
+        }
+        if (!mainWindow) {
+          createWindow();
+        }
+      }, 3000);
+    }
+  }, 1000);
+}
+
+// Modified updateSrcFromGitHub for backward compatibility
+async function updateSrcFromGitHub() {
+  // This function is now just a wrapper for the new update system
+  const updateResult = await checkForUpdates();
+  if (updateResult.hasUpdates) {
+    await performUpdate(updateResult.files);
+  }
+}
+
+// Handle updater window closed
+ipcMain.on('updater-closed', () => {
+  if (!mainWindow) {
+    createWindow();
+  }
+});
+
+// Listen for updater window close
+app.on('window-all-closed', () => {
+  // Don't quit if only updater window is closed
+  if (process.platform !== 'darwin' && !updaterWindow) {
+    app.quit();
+    if (updaterWindow) {
+      updaterWindow.webContents.send('update-status', { 
+        status: 'error', 
+        error: err.message 
+      });
+    }
+    return { hasUpdates: false, files: [], error: err.message };
+  }
+});
+
+async function performUpdate(filesToUpdate) {
+  const owner = 'Zirmith';
+  const repo = 'DarkDex';
+  const branch = 'main';
+  
+  try {
+    if (updaterWindow) {
+      updaterWindow.webContents.send('update-status', { status: 'downloading' });
+    }
+    
+    // Backup before updating
+    const backupPath = backupSrcFolder();
+    if (backupPath) {
+      console.log(`Backup created at: ${backupPath}`);
+    }
+
+    let completedFiles = 0;
+    const totalFiles = filesToUpdate.length;
+
+    for (const file of filesToUpdate) {
+      const localPath = path.join(__dirname, file);
+      const remoteContent = await downloadGitHubFile(owner, repo, branch, file);
+      
+      fs.mkdirSync(path.dirname(localPath), { recursive: true });
+      fs.writeFileSync(localPath, remoteContent, 'utf8');
+      
+      completedFiles++;
+      const progress = Math.round((completedFiles / totalFiles) * 100);
+      
+      if (updaterWindow) {
+        updaterWindow.webContents.send('update-progress', {
+          percent: progress,
+          message: `Updating ${path.basename(file)}... (${completedFiles}/${totalFiles})`
+        });
+      }
+      
+      // Small delay to show progress
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    console.log(`Successfully updated ${filesToUpdate.length} files`);
+    
+    if (updaterWindow) {
+      updaterWindow.webContents.send('update-status', { status: 'complete' });
+    }
+    
+    // Close updater and show restart dialog
+    setTimeout(() => {
+      if (updaterWindow) {
+        updaterWindow.close();
+      }
+      
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Complete',
+        message: 'DarkDex has been updated successfully. The application will restart now.',
+        buttons: ['Restart Now']
+      }).then(() => {
+        app.relaunch();
+        app.exit();
+      });
+    }, 2000);
+    
+  } catch (error) {
+    console.error('Update failed:', error.message);
+    if (updaterWindow) {
+      updaterWindow.webContents.send('update-status', { 
+        status: 'error', 
+        error: error.message 
+      });
+    }
+  }
+}
+
+// IPC handlers for updater
+ipcMain.on('check-for-updates', async () => {
+  await checkForUpdates();
+});
+
+ipcMain.on('start-update', async () => {
+  const updateCheck = await checkForUpdates();
+  if (updateCheck.hasUpdates) {
+    await performUpdate(updateCheck.files);
+  }
+});
+
+ipcMain.on('skip-update', () => {
+  if (updaterWindow) {
+    updaterWindow.close();
+  }
+  // Continue with normal app startup
+  if (!mainWindow) {
+    createWindow();
+  }
+});
+
+// Show updater window and check for updates
+async function showUpdaterAndCheck() {
+  createUpdaterWindow();
+  
+  // Wait a moment for the updater window to be ready
+  setTimeout(async () => {
+    const updateResult = await checkForUpdates();
+    
+    // If no updates and no error, automatically continue after a delay
+    if (!updateResult.hasUpdates && !updateResult.error) {
+      setTimeout(() => {
+        if (updaterWindow) {
+          updaterWindow.close();
+        }
+        if (!mainWindow) {
+          createWindow();
+        }
+      }, 3000);
+    }
+  }, 1000);
+}
+
+// Modified updateSrcFromGitHub for backward compatibility
+async function updateSrcFromGitHub() {
+  // This function is now just a wrapper for the new update system
+  const updateResult = await checkForUpdates();
+  if (updateResult.hasUpdates) {
+    await performUpdate(updateResult.files);
+  }
+}
+
+// Handle updater window closed
+ipcMain.on('updater-closed', () => {
+  if (!mainWindow) {
+    createWindow();
+  }
+});
+
+// Listen for updater window close
+app.on('window-all-closed', () => {
+  // Don't quit if only updater window is closed
+  if (process.platform !== 'darwin' && !updaterWindow) {
+    app.quit();
+  }
+});
+
+// Update the window-all-closed handler
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+    } else {
+      app.quit();
+    }
+});
 
 
 // API and caching handlers
@@ -382,9 +744,13 @@ ipcMain.handle('test-connection', async () => {
 // App lifecycle
 // =====================
 app.whenReady().then(async () => {
-  await updateSrcFromGitHub(); // <-- Run updater before window loads
-  createWindow();
+  // Show updater first, then main window
+  await showUpdaterAndCheck();
 });
+  // Show updater first, then main window
+  await showUpdaterAndCheck();
+});
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
@@ -393,6 +759,6 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+    showUpdaterAndCheck();
   }
 });

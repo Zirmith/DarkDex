@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DarkDex Updater</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .updater-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .updater-content {
+            text-align: center;
+            color: white;
+            max-width: 600px;
+            padding: 40px;
+        }
+        
+        .lugia-container {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        
+        .updater-lugia {
+            width: 120px;
+            height: 120px;
+            filter: drop-shadow(0 0 20px rgba(138, 43, 226, 0.6));
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .shadow-aura {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(138, 43, 226, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .updater-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #8a2be2, #4b0082, #9370db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
+        }
+        
+        .updater-subtitle {
+            font-size: 1.2rem;
+            color: #b8b8b8;
+            margin-bottom: 30px;
+        }
+        
+        .update-info {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .update-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        
+        .update-status.available {
+            color: #4ade80;
+        }
+        
+        .update-status.up-to-date {
+            color: #60a5fa;
+        }
+        
+        .update-status.error {
+            color: #f87171;
+        }
+        
+        .update-details {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        
+        .update-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            color: #d1d5db;
+            font-size: 0.9rem;
+        }
+        
+        .update-item i {
+            color: #8a2be2;
+            width: 20px;
+        }
+        
+        .update-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 24px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #8a2be2, #4b0082);
+            color: white;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #d1d5db;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .update-progress {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8a2be2, #4b0082);
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.6);
+        }
+        
+        .progress-text {
+            font-size: 0.9rem;
+            color: #b8b8b8;
+            text-align: center;
+        }
+        
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        
+        .particles::before,
+        .particles::after {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: rgba(138, 43, 226, 0.6);
+            border-radius: 50%;
+            animation: float-particle 8s linear infinite;
+        }
+        
+        .particles::before {
+            top: 20%;
+            left: 10%;
+            animation-delay: -2s;
+        }
+        
+        .particles::after {
+            top: 60%;
+            right: 15%;
+            animation-delay: -4s;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+        }
+        
+        @keyframes float-particle {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="updater-screen">
+        <div class="updater-content">
+            <div class="lugia-container">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/249.gif" alt="Shadow Lugia" class="updater-lugia" id="updater-lugia">
+                <div class="shadow-aura"></div>
+            </div>
+            <h1 class="updater-title">DarkDex Updater</h1>
+            <p class="updater-subtitle">Shadow Database Update System</p>
+            
+            <div class="update-info">
+                <div class="update-status" id="update-status">
+                    <i class="ri-loader-4-line" id="status-icon"></i>
+                    <span id="status-text">Checking for updates...</span>
+                </div>
+                
+                <div class="update-details" id="update-details" style="display: none;">
+                    <!-- Update details will be populated here -->
+                </div>
+                
+                <div class="update-actions" id="update-actions" style="display: none;">
+                    <button class="btn btn-primary" id="update-btn">
+                        <i class="ri-download-line"></i>
+                        Update Now
+                    </button>
+                    <button class="btn btn-secondary" id="skip-btn">
+                        <i class="ri-skip-forward-line"></i>
+                        Skip Update
+                    </button>
+                </div>
+                
+                <div class="update-progress" id="update-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">Preparing update...</div>
+                </div>
+            </div>
+            
+            <div class="particles"></div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        // DOM elements
+        const statusIcon = document.getElementById('status-icon');
+        const statusText = document.getElementById('status-text');
+        const updateStatus = document.getElementById('update-status');
+        const updateDetails = document.getElementById('update-details');
+        const updateActions = document.getElementById('update-actions');
+        const updateProgress = document.getElementById('update-progress');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const updateBtn = document.getElementById('update-btn');
+        const skipBtn = document.getElementById('skip-btn');
+
+        // Listen for update status from main process
+        ipcRenderer.on('update-status', (event, data) => {
+            updateUI(data);
+        });
+
+        // Listen for update progress
+        ipcRenderer.on('update-progress', (event, progress) => {
+            updateProgress.style.display = 'block';
+            progressFill.style.width = `${progress.percent}%`;
+            progressText.textContent = progress.message;
+        });
+
+        // Button event listeners
+        updateBtn.addEventListener('click', () => {
+            ipcRenderer.send('start-update');
+            updateActions.style.display = 'none';
+            updateProgress.style.display = 'block';
+        });
+
+        skipBtn.addEventListener('click', () => {
+            ipcRenderer.send('skip-update');
+        });
+
+        function updateUI(data) {
+            statusIcon.className = '';
+            updateStatus.className = 'update-status';
+            
+            switch (data.status) {
+                case 'checking':
+                    statusIcon.className = 'ri-loader-4-line';
+                    statusText.textContent = 'Checking for updates...';
+                    updateStatus.classList.add('checking');
+                    break;
+                    
+                case 'available':
+                    statusIcon.className = 'ri-download-cloud-line';
+                    statusText.textContent = 'Update Available!';
+                    updateStatus.classList.add('available');
+                    showUpdateDetails(data.updateInfo);
+                    updateActions.style.display = 'flex';
+                    break;
+                    
+                case 'up-to-date':
+                    statusIcon.className = 'ri-check-line';
+                    statusText.textContent = 'DarkDex is up to date';
+                    updateStatus.classList.add('up-to-date');
+                    setTimeout(() => {
+                        ipcRenderer.send('skip-update');
+                    }, 2000);
+                    break;
+                    
+                case 'error':
+                    statusIcon.className = 'ri-error-warning-line';
+                    statusText.textContent = 'Update check failed';
+                    updateStatus.classList.add('error');
+                    showErrorDetails(data.error);
+                    updateActions.style.display = 'flex';
+                    updateBtn.style.display = 'none';
+                    skipBtn.textContent = 'Continue';
+                    break;
+                    
+                case 'downloading':
+                    statusIcon.className = 'ri-download-line';
+                    statusText.textContent = 'Downloading update...';
+                    updateProgress.style.display = 'block';
+                    break;
+                    
+                case 'complete':
+                    statusIcon.className = 'ri-check-line';
+                    statusText.textContent = 'Update complete! Restarting...';
+                    updateStatus.classList.add('up-to-date');
+                    updateProgress.style.display = 'none';
+                    break;
+            }
+        }
+
+        function showUpdateDetails(updateInfo) {
+            updateDetails.style.display = 'block';
+            updateDetails.innerHTML = `
+                <div class="update-item">
+                    <i class="ri-file-list-3-line"></i>
+                    <span>Files to update: ${updateInfo.files ? updateInfo.files.length : 'Unknown'}</span>
+                </div>
+                <div class="update-item">
+                    <i class="ri-time-line"></i>
+                    <span>Last updated: ${updateInfo.lastUpdate || 'Unknown'}</span>
+                </div>
+                <div class="update-item">
+                    <i class="ri-information-line"></i>
+                    <span>New features and bug fixes available</span>
+                </div>
+            `;
+        }
+
+        function showErrorDetails(error) {
+            updateDetails.style.display = 'block';
+            updateDetails.innerHTML = `
+                <div class="update-item">
+                    <i class="ri-error-warning-line"></i>
+                    <span>Error: ${error || 'Unknown error occurred'}</span>
+                </div>
+                <div class="update-item">
+                    <i class="ri-information-line"></i>
+                    <span>You can continue using DarkDex normally</span>
+                </div>
+            `;
+        }
+
+        // Start checking for updates when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            ipcRenderer.send('check-for-updates');
+        });
+    </script>
+</body>
+</html>
