@@ -13,9 +13,11 @@
     body {
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: radial-gradient(circle at center, #111 0%, #0a0a0a 100%);
-      color: #ddd;
+      font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a0d2e 25%, #16213e 50%, #0f3460 75%, #0a0a0a 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      color: #e2e8f0;
       user-select: none;
       overflow: hidden;
       height: 100vh;
@@ -23,338 +25,90 @@
       justify-content: center;
       align-items: center;
       padding: 20px;
-    }
-
-    /* Installer container */
-    .installer-card {
-      background: rgba(18, 12, 40, 0.95);
-      width: 480px;
-      max-width: 95vw;
-      border-radius: 16px;
-      box-shadow: 0 0 40px rgba(138, 43, 226, 0.7);
-      border: 1px solid rgba(138, 43, 226, 0.3);
-      padding: 30px 40px 40px;
       position: relative;
-      overflow: hidden;
     }
 
-    /* Header with Lugia and title */
-    .header {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      margin-bottom: 25px;
+    /* Animated background gradient */
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
-    .lugia-container {
-      position: relative;
-      width: 100px;
-      height: 100px;
-      flex-shrink: 0;
-    }
-
-    .updater-lugia {
+    /* Background particles */
+    .bg-particles {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      object-fit: contain;
-      filter: drop-shadow(0 0 15px rgba(138, 43, 226, 0.7));
-      animation: float 3.5s ease-in-out infinite;
-      z-index: 10;
-      position: relative;
-    }
-
-    .shadow-aura {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 180px;
-      height: 180px;
-      background: radial-gradient(circle, rgba(138, 43, 226, 0.3) 0%, transparent 70%);
-      border-radius: 50%;
-      animation: pulse 2.5s ease-in-out infinite;
-      filter: blur(10px);
+      pointer-events: none;
       z-index: 1;
     }
 
-    .title-container {
-      flex-grow: 1;
-      user-select: text;
-    }
-
-    .updater-title {
-      font-size: 2.4rem;
-      font-weight: 900;
-      margin: 0;
-      background: linear-gradient(45deg, #8a2be2, #4b0082, #9370db);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-shadow: 0 0 25px rgba(138, 43, 226, 0.5);
-      letter-spacing: 1.2px;
-    }
-
-    .updater-subtitle {
-      margin-top: 6px;
-      font-size: 1.1rem;
-      color: #b8b8b8;
-      font-weight: 500;
-    }
-
-    /* Installer steps tracker */
-    .steps {
-      display: flex;
-      justify-content: space-between;
-      margin: 30px 0 20px;
-      user-select: none;
-    }
-
-    .step {
-      flex-grow: 1;
-      position: relative;
-      text-align: center;
-      font-weight: 600;
-      font-size: 0.85rem;
-      color: #777;
-      cursor: default;
-      padding: 0 5px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      user-select: none;
-      transition: color 0.3s ease;
-    }
-    .step:not(:last-child)::after {
-      content: '';
+    .bg-particle {
       position: absolute;
-      top: 50%;
-      right: 0;
-      width: 100%;
-      height: 3px;
-      background: #3e2c6a;
-      transform: translateX(50%);
-      z-index: -1;
-      border-radius: 2px;
-    }
-    .step.active {
-      color: #8a2be2;
-      position: relative;
-    }
-    .step.active::after {
-      background: linear-gradient(90deg, #8a2be2, #4b0082);
-      box-shadow: 0 0 12px rgba(138, 43, 226, 0.6);
-    }
-    .step.completed {
-      color: #4ade80;
-    }
-    .step.completed::after {
-      background: #4ade80;
-      box-shadow: 0 0 12px #4ade80;
-    }
-
-    /* Update info panel */
-    .update-info {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(138, 43, 226, 0.3);
-      border-radius: 14px;
-      padding: 25px 30px;
-      font-size: 0.95rem;
-      color: #d1d5db;
-      line-height: 1.4;
-      min-height: 110px;
-      user-select: text;
-    }
-
-    .update-item {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 10px 0;
-      color: #c0bde5;
-    }
-
-    .update-item i {
-      color: #8a2be2;
-      font-size: 1.25rem;
-      min-width: 24px;
-      text-align: center;
-    }
-
-    /* Update status (icon + text) */
-    .update-status {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      font-size: 1.15rem;
-      margin-bottom: 15px;
-      justify-content: center;
-      user-select: none;
-      font-weight: 600;
-      color: #aaa;
-    }
-    .update-status.available {
-      color: #4ade80;
-    }
-    .update-status.up-to-date {
-      color: #60a5fa;
-    }
-    .update-status.error {
-      color: #f87171;
-    }
-
-    /* Progress bar */
-    .progress-bar {
-      width: 100%;
-      height: 10px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 5px;
-      overflow: hidden;
-      margin-bottom: 12px;
-      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.25);
-    }
-
-    .progress-fill {
-      height: 100%;
-      width: 0;
-      background: linear-gradient(90deg, #8a2be2, #4b0082);
-      box-shadow: 0 0 10px rgba(138, 43, 226, 0.7);
-      transition: width 0.35s ease;
-      background-size: 200% 100%;
-      animation: loading-stripes 1.5s linear infinite;
-      border-radius: 5px;
-    }
-
-    @keyframes loading-stripes {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
-    .progress-text {
-      text-align: center;
-      font-size: 0.9rem;
-      color: #b8b8b8;
-      font-weight: 500;
-      user-select: none;
-    }
-
-    /* Buttons */
-    .update-actions {
-      margin-top: 28px;
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      user-select: none;
-    }
-
-    .btn {
-      padding: 14px 32px;
-      border-radius: 10px;
-      border: none;
-      font-weight: 700;
-      font-size: 1rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      transition: all 0.3s ease;
-      user-select: none;
-      box-shadow: 0 0 10px rgba(0,0,0,0.15);
-    }
-
-    .btn-primary {
-      background: linear-gradient(45deg, #8a2be2, #4b0082);
-      color: white;
-      box-shadow: 0 0 20px rgba(138, 43, 226, 0.6);
-    }
-    .btn-primary:hover {
-      box-shadow: 0 0 25px rgba(138, 43, 226, 0.8);
-      transform: translateY(-3px);
-    }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.12);
-      color: #d1d5db;
-      border: 1.5px solid rgba(255, 255, 255, 0.2);
-    }
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.25);
-      color: white;
-      border-color: rgba(138, 43, 226, 0.8);
-      box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
-    }
-
-    /* Particle effect behind the card */
-    .particles {
-      pointer-events: none;
-      position: absolute;
-      top: -15%;
-      left: -15%;
-      width: 130%;
-      height: 130%;
-      overflow: visible;
-      z-index: 0;
-      filter: drop-shadow(0 0 3px rgba(138, 43, 226, 0.7));
-    }
-
-    .particles span {
-      position: absolute;
-      background: rgba(138, 43, 226, 0.6);
+      background: radial-gradient(circle, rgba(139, 69, 255, 0.8) 0%, rgba(59, 130, 246, 0.4) 50%, transparent 100%);
       border-radius: 50%;
-      opacity: 0.6;
-      animation: float-particle 8s linear infinite;
-      filter: drop-shadow(0 0 8px rgba(138, 43, 226, 0.9));
+      animation: floatUp 12s linear infinite;
     }
-    /* Multiple particles with different delays and sizes */
-    .particles span:nth-child(1) {
-      width: 4px;
-      height: 4px;
-      top: 30%;
+
+    .bg-particle:nth-child(1) {
+      width: 6px;
+      height: 6px;
       left: 10%;
       animation-delay: 0s;
     }
-    .particles span:nth-child(2) {
-      width: 3px;
-      height: 3px;
-      top: 60%;
-      left: 70%;
-      animation-delay: 3s;
-    }
-    .particles span:nth-child(3) {
-      width: 2px;
-      height: 2px;
-      top: 50%;
-      left: 45%;
-      animation-delay: 5s;
-    }
-    .particles span:nth-child(4) {
-      width: 5px;
-      height: 5px;
-      top: 15%;
-      left: 85%;
+    .bg-particle:nth-child(2) {
+      width: 4px;
+      height: 4px;
+      left: 20%;
       animation-delay: 2s;
     }
-
-    /* Animations */
-    @keyframes float {
-      0%, 100% {
-        transform: translateY(0);
-      }
-      50% {
-        transform: translateY(-15px);
-      }
+    .bg-particle:nth-child(3) {
+      width: 8px;
+      height: 8px;
+      left: 30%;
+      animation-delay: 4s;
+    }
+    .bg-particle:nth-child(4) {
+      width: 3px;
+      height: 3px;
+      left: 40%;
+      animation-delay: 6s;
+    }
+    .bg-particle:nth-child(5) {
+      width: 5px;
+      height: 5px;
+      left: 50%;
+      animation-delay: 8s;
+    }
+    .bg-particle:nth-child(6) {
+      width: 7px;
+      height: 7px;
+      left: 60%;
+      animation-delay: 10s;
+    }
+    .bg-particle:nth-child(7) {
+      width: 4px;
+      height: 4px;
+      left: 70%;
+      animation-delay: 1s;
+    }
+    .bg-particle:nth-child(8) {
+      width: 6px;
+      height: 6px;
+      left: 80%;
+      animation-delay: 3s;
+    }
+    .bg-particle:nth-child(9) {
+      width: 5px;
+      height: 5px;
+      left: 90%;
+      animation-delay: 5s;
     }
 
-    @keyframes pulse {
-      0%, 100% {
-        opacity: 0.6;
-        transform: translate(-50%, -50%) scale(1);
-      }
-      50% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.1);
-      }
-    }
-
-    @keyframes float-particle {
+    @keyframes floatUp {
       0% {
         transform: translateY(100vh) rotate(0deg);
         opacity: 0;
@@ -370,9 +124,430 @@
         opacity: 0;
       }
     }
+
+    /* Installer container */
+    .installer-card {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(20px);
+      width: 520px;
+      max-width: 95vw;
+      border-radius: 24px;
+      box-shadow: 
+        0 0 60px rgba(139, 69, 255, 0.4),
+        0 0 120px rgba(59, 130, 246, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(139, 69, 255, 0.3);
+      padding: 40px 45px 45px;
+      position: relative;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    .installer-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(139, 69, 255, 0.1) 0%, transparent 50%, rgba(59, 130, 246, 0.1) 100%);
+      border-radius: 24px;
+      z-index: -1;
+    }
+
+    /* Header with Lugia and title */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 25px;
+      margin-bottom: 35px;
+    }
+
+    .lugia-container {
+      position: relative;
+      width: 110px;
+      height: 110px;
+      flex-shrink: 0;
+    }
+
+    .updater-lugia {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 0 20px rgba(139, 69, 255, 0.8));
+      animation: float 4s ease-in-out infinite;
+      z-index: 10;
+      position: relative;
+    }
+
+    .shadow-aura {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(139, 69, 255, 0.4) 0%, rgba(59, 130, 246, 0.2) 40%, transparent 70%);
+      border-radius: 50%;
+      animation: pulse 3s ease-in-out infinite;
+      filter: blur(15px);
+      z-index: 1;
+    }
+
+    .title-container {
+      flex-grow: 1;
+      user-select: text;
+    }
+
+    .updater-title {
+      font-size: 2.8rem;
+      font-weight: 900;
+      margin: 0;
+      background: linear-gradient(135deg, #8b45ff 0%, #3b82f6 50%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 30px rgba(139, 69, 255, 0.6);
+      letter-spacing: 1.5px;
+      line-height: 1.1;
+    }
+
+    .updater-subtitle {
+      margin-top: 8px;
+      font-size: 1.2rem;
+      color: #94a3b8;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Installer steps tracker */
+    .steps {
+      display: flex;
+      justify-content: space-between;
+      margin: 35px 0 25px;
+      user-select: none;
+      position: relative;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+      border-radius: 2px;
+      z-index: 1;
+    }
+
+    .step {
+      position: relative;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #64748b;
+      cursor: default;
+      padding: 0 8px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      user-select: none;
+      transition: all 0.4s ease;
+      z-index: 2;
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 8px 16px;
+      border: 2px solid #334155;
+    }
+
+    .step.active {
+      color: #8b45ff;
+      border-color: #8b45ff;
+      box-shadow: 0 0 20px rgba(139, 69, 255, 0.4);
+      background: rgba(139, 69, 255, 0.1);
+    }
+
+    .step.completed {
+      color: #10b981;
+      border-color: #10b981;
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    /* Update info panel */
+    .update-info {
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(139, 69, 255, 0.2);
+      border-radius: 18px;
+      padding: 30px 35px;
+      font-size: 1rem;
+      color: #e2e8f0;
+      line-height: 1.5;
+      min-height: 120px;
+      user-select: text;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .update-info::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(139, 69, 255, 0.5) 50%, transparent 100%);
+    }
+
+    .update-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 0;
+      color: #cbd5e1;
+      transition: color 0.3s ease;
+    }
+
+    .update-item:hover {
+      color: #f1f5f9;
+    }
+
+    .update-item i {
+      color: #8b45ff;
+      font-size: 1.4rem;
+      min-width: 28px;
+      text-align: center;
+      filter: drop-shadow(0 0 8px rgba(139, 69, 255, 0.6));
+    }
+
+    /* Update status (icon + text) */
+    .update-status {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 1.3rem;
+      margin-bottom: 18px;
+      justify-content: center;
+      user-select: none;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+    .update-status.available {
+      color: #10b981;
+    }
+    .update-status.up-to-date {
+      color: #3b82f6;
+    }
+    .update-status.error {
+      color: #ef4444;
+    }
+
+    .update-status i {
+      font-size: 1.5rem;
+      filter: drop-shadow(0 0 10px currentColor);
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: rgba(30, 41, 59, 0.8);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 15px;
+      box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(139, 69, 255, 0.2);
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #8b45ff 0%, #3b82f6 50%, #06b6d4 100%);
+      box-shadow: 0 0 15px rgba(139, 69, 255, 0.8);
+      transition: width 0.4s ease;
+      background-size: 200% 100%;
+      animation: loading-stripes 2s linear infinite;
+      border-radius: 6px;
+      position: relative;
+    }
+
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+      animation: shimmer 1.5s ease-in-out infinite;
+    }
+
+    @keyframes loading-stripes {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .progress-text {
+      text-align: center;
+      font-size: 1rem;
+      color: #cbd5e1;
+      font-weight: 600;
+      user-select: none;
+    }
+
+    /* Buttons */
+    .update-actions {
+      margin-top: 32px;
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      user-select: none;
+    }
+
+    .btn {
+      padding: 16px 36px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s ease;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
+      transition: left 0.5s ease;
+    }
+
+    .btn:hover::before {
+      left: 100%;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #8b45ff 0%, #3b82f6 100%);
+      color: white;
+      box-shadow: 0 0 25px rgba(139, 69, 255, 0.5);
+      border: 1px solid rgba(139, 69, 255, 0.3);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 35px rgba(139, 69, 255, 0.7);
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, #9d5bff 0%, #4f90f7 100%);
+    }
+
+    .btn-secondary {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(10px);
+      color: #e2e8f0;
+      border: 2px solid rgba(139, 69, 255, 0.3);
+    }
+    .btn-secondary:hover {
+      background: rgba(139, 69, 255, 0.2);
+      color: white;
+      border-color: rgba(139, 69, 255, 0.6);
+      box-shadow: 0 0 20px rgba(139, 69, 255, 0.4);
+      transform: translateY(-2px);
+    }
+
+    /* Animations */
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0) rotate(0deg);
+      }
+      50% {
+        transform: translateY(-18px) rotate(5deg);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 0.6;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.15);
+      }
+    }
+
+    /* Responsive design */
+    @media (max-width: 600px) {
+      .installer-card {
+        padding: 30px 25px 35px;
+        width: 100%;
+        margin: 10px;
+      }
+      
+      .header {
+        gap: 20px;
+        margin-bottom: 25px;
+      }
+      
+      .lugia-container {
+        width: 90px;
+        height: 90px;
+      }
+      
+      .updater-title {
+        font-size: 2.2rem;
+      }
+      
+      .updater-subtitle {
+        font-size: 1rem;
+      }
+      
+      .steps {
+        margin: 25px 0 20px;
+      }
+      
+      .step {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+      }
+      
+      .update-actions {
+        flex-direction: column;
+        gap: 16px;
+      }
+      
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
   </style>
 </head>
 <body>
+  <div class="bg-particles">
+    <div class="bg-particle"></div>
+    <div class="bg-particle"></div>
+    <div class="bg-particle"></div>
+    <div class="bg-particle"></div>
+    <div class="bg-particle"></div>
+    <div class="bg-particle"></div>
+    <div class="bg-particle"></div>
+    <div class="bg-particle"></div>
+    <div class="bg-particle"></div>
+  </div>
+
   <div class="installer-card" role="main" aria-label="DarkDex Updater">
     <div class="header">
       <div class="lugia-container" aria-hidden="true">
@@ -385,16 +560,16 @@
         <div class="shadow-aura"></div>
       </div>
       <div class="title-container">
-        <h1 class="updater-title">DarkDex Updater</h1>
-        <p class="updater-subtitle">Shadow Database Update System</p>
+        <h1 class="updater-title">DarkDex</h1>
+        <p class="updater-subtitle">Shadow Database Updater</p>
       </div>
     </div>
 
     <nav class="steps" aria-label="Update process steps">
       <div class="step active" id="step-check">Checking</div>
-      <div class="step" id="step-download">Downloading</div>
-      <div class="step" id="step-install">Installing</div>
-      <div class="step" id="step-finish">Finished</div>
+      <div class="step" id="step-download">Download</div>
+      <div class="step" id="step-install">Install</div>
+      <div class="step" id="step-finish">Complete</div>
     </nav>
 
     <section class="update-info" aria-live="polite" id="update-info">
@@ -419,10 +594,6 @@
         <i class="ri-skip-forward-line" aria-hidden="true"></i> Skip Update
       </button>
     </section>
-
-    <div class="particles" aria-hidden="true">
-      <span></span><span></span><span></span><span></span>
-    </div>
   </div>
 
   <script>
