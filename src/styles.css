@@ -3132,6 +3132,101 @@ body {
     color: var(--text-secondary);
 }
 
+
+/* Container for the tabs */
+.cache-tabs {
+  display: flex;
+  gap: 12px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: var(--shadow-md);
+  user-select: none;
+}
+
+/* Individual tab buttons */
+.cache-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: 
+    color 0.3s ease,
+    background-color 0.3s ease,
+    box-shadow 0.3s ease;
+  position: relative;
+}
+
+/* Icon styling */
+.cache-tab-btn i {
+  font-size: 18px;
+  color: var(--primary-light);
+  transition: color 0.3s ease;
+}
+
+/* Hover effect */
+.cache-tab-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--primary-light);
+  box-shadow: 0 0 8px var(--primary-color);
+}
+
+.cache-tab-btn:hover i {
+  color: var(--primary-color);
+}
+
+/* Active tab styling */
+.cache-tab-btn.active {
+  background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+  color: white;
+  box-shadow: 0 0 12px var(--primary-color);
+  font-weight: 700;
+  z-index: 1;
+}
+
+.cache-tab-btn.active i {
+  color: white;
+}
+
+/* Failed badge styling */
+.failed-badge {
+  background: var(--error-color);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+  box-shadow: 0 0 6px var(--error-color);
+  user-select: none;
+  transition: transform 0.3s ease;
+}
+
+/* Optional: subtle pulse animation for badge when visible */
+.failed-badge.show {
+  animation: pulseError 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseError {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 6px var(--error-color);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 12px var(--error-color);
+  }
+}
+
+
 /* Responsive Updates */
 @media (max-width: 768px) {
     .update-notification {
