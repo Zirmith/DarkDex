@@ -446,14 +446,157 @@ class DarkDexApp {
     }
 
     setupCacheManagement() {
-        const cacheBtn = document.getElementById('cache-btn');
+        const cacheBtn = document.getElementById('cache-management');
+        const cacheModal = document.getElementById('cache-modal');
+        const closeCacheModal = document.getElementById('close-cache-modal');
+        const cacheStats = document.getElementById('cache-stats');
+        const cacheActions = document.getElementById('cache-actions');
+        const failedDownloadsSection = document.getElementById('failed-downloads-section');
+
         if (cacheBtn) {
-            cacheBtn.addEventListener('click', () => {
-                this.showCacheManagement();
+            cacheBtn.addEventListener('click', async () => {
+                cacheModal.style.display = 'flex';
+                await this.loadCacheStats();
+                await this.loadFailedDownloads();
             });
         }
 
-        // Setup cache action buttons
+        if (closeCacheModal) {
+            closeCacheModal.addEventListener('click', () => {
+                cacheModal.style.display = 'none';
+            });
+        }
+
+        // Close modal when clicking outside
+        if (cacheModal) {
+            cacheModal.addEventListener('click', (e) => {
+                if (e.target === cacheModal) {
+                    cacheModal.style.display = 'none';
+                }
+            });
+        }
+
+        // Clear cache buttons
+        this.setupCacheButtons();
+        this.setupFailedDownloadsButtons();
+    }
+
+    async loadCacheStats() {
+        const cacheStats = document.getElementById('cache-stats');
+        const cacheActions = document.getElementById('cache-actions');
+        
+        if (!cacheStats) return;
+
+        try {
+            // Show loading
+            cacheStats.innerHTML = `
+                <div class="loading-spinner">
+                    <i class="ri-loader-4-line"></i>
+                </div>
+                <p>Loading cache statistics...</p>
+            `;
+
+            // Get cache stats
+            const stats = await window.pokemonAPI.getCacheStats();
+
+            if (stats) {
+                // Display cache stats
+                cacheStats.innerHTML = `
+                    <div class="cache-overview">
+                        <div class="cache-stat-card">
+                            <div class="cache-stat-header">
+                                <i class="ri-database-2-line"></i>
+                                <h3>Total Cache</h3>
+                            </div>
+                            <div class="cache-stat-value">
+                                <div class="size">${this.formatBytes(stats.total.size)}</div>
+                                <div class="files">${stats.total.files} files</div>
+                            </div>
+                        </div>
+                        
+                        <div class="cache-breakdown">
+                            <div class="cache-item">
+                                <div class="cache-item-info">
+                                    <i class="ri-database-line"></i>
+                                    <span>Pokémon Data</span>
+                                </div>
+                                <div class="cache-item-stats">
+                                    <div class="size">${this.formatBytes(stats.data.size)}</div>
+                                    <div class="files">${stats.data.files} files</div>
+                                </div>
+                            </div>
+                            <div class="cache-item">
+                                <div class="cache-item-info">
+                                    <i class="ri-image-line"></i>
+                                    <span>Sprites</span>
+                                </div>
+                                <div class="cache-item-stats">
+                                    <div class="size">${this.formatBytes(stats.sprites.size)}</div>
+                                    <div class="files">${stats.sprites.files} files</div>
+                                </div>
+                            </div>
+                            <div class="cache-item">
+                                <div class="cache-item-info">
+                                    <i class="ri-volume-up-line"></i>
+                                    <span>Audio</span>
+                                </div>
+                                <div class="cache-item-stats">
+                                    <div class="size">${this.formatBytes(stats.audio.size)}</div>
+                                    <div class="files">${stats.audio.files} files</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="cache-performance">
+                            <h4>Performance Statistics</h4>
+                            <div class="performance-stats">
+                                <div class="perf-stat">
+                                    <span class="label">Cache Hits</span>
+                                    <span class="value success">${stats.performance.hits}</span>
+                                </div>
+                                <div class="perf-stat">
+                                    <span class="label">Cache Misses</span>
+                                    <span class="value warning">${stats.performance.misses}</span>
+                                </div>
+                                <div class="perf-stat">
+                                    <span class="label">Errors</span>
+                                    <span class="value error">${stats.performance.errors}</span>
+                                </div>
+                                <div class="perf-stat">
+                                    <span class="label">Hit Rate</span>
+                                    <span class="value">${this.calculateHitRate(stats.performance)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Show cache actions
+                if (cacheActions) {
+                    cacheActions.style.display = 'block';
+                }
+            } else {
+                cacheStats.innerHTML = `
+                    <div class="cache-error">
+                        <i class="ri-error-warning-line"></i>
+                        <p>Unable to load cache statistics</p>
+                        <small>Please try again later</small>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading cache stats:', error);
+            cacheStats.innerHTML = `
+                <div class="cache-error">
+                    <i class="ri-error-warning-line"></i>
+                    <p>Error loading cache statistics</p>
+                    <small>${error.message}</small>
+                </div>
+            `;
+        }
+    }
+
+    setupCacheButtons() {
         const clearDataCacheBtn = document.getElementById('clear-data-cache');
         const clearSpriteCacheBtn = document.getElementById('clear-sprite-cache');
         const clearAudioCacheBtn = document.getElementById('clear-audio-cache');
@@ -463,7 +606,7 @@ class DarkDexApp {
             clearDataCacheBtn.addEventListener('click', async () => {
                 if (confirm('Clear all Pokemon data cache? This will require re-downloading Pokemon data.')) {
                     await this.clearCache('data');
-                    this.showCacheManagement(); // Refresh the modal
+                    await this.loadCacheStats(); // Refresh the modal
                 }
             });
         }
@@ -472,7 +615,7 @@ class DarkDexApp {
             clearSpriteCacheBtn.addEventListener('click', async () => {
                 if (confirm('Clear all sprite cache? This will require re-downloading sprites.')) {
                     await this.clearCache('sprites');
-                    this.showCacheManagement(); // Refresh the modal
+                    await this.loadCacheStats(); // Refresh the modal
                 }
             });
         }
@@ -481,7 +624,7 @@ class DarkDexApp {
             clearAudioCacheBtn.addEventListener('click', async () => {
                 if (confirm('Clear all audio cache? This will require re-downloading audio files.')) {
                     await this.clearCache('audio');
-                    this.showCacheManagement(); // Refresh the modal
+                    await this.loadCacheStats(); // Refresh the modal
                 }
             });
         }
@@ -490,7 +633,231 @@ class DarkDexApp {
             clearAllCacheBtn.addEventListener('click', async () => {
                 if (confirm('Clear ALL cache? This will require re-downloading everything and may take a while to reload.')) {
                     await this.clearCache('all');
-                    this.showCacheManagement(); // Refresh the modal
+                    await this.loadCacheStats(); // Refresh the modal
+                }
+            });
+        }
+    }
+
+    async loadFailedDownloads() {
+        const failedDownloadsSection = document.getElementById('failed-downloads-section');
+        const failedDownloadsList = document.getElementById('failed-downloads-list');
+        const failedPokemonCount = document.getElementById('failed-pokemon-count');
+        const failedSpritesCount = document.getElementById('failed-sprites-count');
+        const failedAudioCount = document.getElementById('failed-audio-count');
+        
+        if (!failedDownloadsSection || !window.pokemonAPI) return;
+
+        try {
+            // Initialize failed tracking if not already done
+            if (typeof window.pokemonAPI.initializeFailedTracking === 'function') {
+                window.pokemonAPI.initializeFailedTracking();
+            }
+
+            const failedDownloads = window.pokemonAPI.getAllFailedDownloads();
+            
+            // Update counts
+            if (failedPokemonCount) failedPokemonCount.textContent = failedDownloads.pokemon.length;
+            if (failedSpritesCount) failedSpritesCount.textContent = failedDownloads.sprites.length;
+            if (failedAudioCount) failedAudioCount.textContent = failedDownloads.audio.length;
+
+            // Show section if there are failed downloads
+            if (failedDownloads.total > 0) {
+                failedDownloadsSection.style.display = 'block';
+                this.renderFailedDownloadsList(failedDownloads);
+            } else {
+                failedDownloadsSection.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error loading failed downloads:', error);
+            failedDownloadsSection.style.display = 'none';
+        }
+    }
+
+    renderFailedDownloadsList(failedDownloads) {
+        const failedDownloadsList = document.getElementById('failed-downloads-list');
+        if (!failedDownloadsList) return;
+
+        const allFailed = [
+            ...failedDownloads.pokemon.map(item => ({ ...item, category: 'Pokémon Data' })),
+            ...failedDownloads.sprites.map(item => ({ ...item, category: 'Sprite' })),
+            ...failedDownloads.audio.map(item => ({ ...item, category: 'Audio' }))
+        ];
+
+        if (allFailed.length === 0) {
+            failedDownloadsList.innerHTML = `
+                <div class="no-failed-downloads">
+                    <i class="ri-check-line"></i>
+                    <p>No failed downloads! All resources loaded successfully.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort by timestamp (most recent first)
+        allFailed.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        // Limit to most recent 50 items for performance
+        const displayItems = allFailed.slice(0, 50);
+
+        failedDownloadsList.innerHTML = `
+            <div class="failed-downloads-header-info">
+                <p>Showing ${displayItems.length} of ${allFailed.length} failed downloads</p>
+            </div>
+            <div class="failed-downloads-items">
+                ${displayItems.map(item => `
+                    <div class="failed-download-item" data-type="${item.type}" data-id="${item.id}">
+                        <div class="failed-item-icon">
+                            ${this.getFailedItemIcon(item.type)}
+                        </div>
+                        <div class="failed-item-info">
+                            <div class="failed-item-name">
+                                ${item.name.charAt(0).toUpperCase() + item.name.slice(1)}
+                                <span class="failed-item-category">${item.category}</span>
+                            </div>
+                            <div class="failed-item-error">${item.error}</div>
+                            <div class="failed-item-time">
+                                ${this.formatTimestamp(item.timestamp)}
+                            </div>
+                        </div>
+                        <div class="failed-item-actions">
+                            <button class="retry-failed-item btn-small" data-type="${item.type}" data-id="${item.id}" data-name="${item.name}">
+                                <i class="ri-refresh-line"></i> Retry
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        // Add event listeners for individual retry buttons
+        const retryButtons = failedDownloadsList.querySelectorAll('.retry-failed-item');
+        retryButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const type = button.dataset.type;
+                const id = button.dataset.id;
+                const name = button.dataset.name;
+                
+                button.disabled = true;
+                button.innerHTML = '<i class="ri-loader-4-line"></i> Retrying...';
+                
+                try {
+                    const result = await window.pokemonAPI.retryFailedDownload({ type, id, name });
+                    if (result.success) {
+                        button.innerHTML = '<i class="ri-check-line"></i> Success';
+                        button.style.background = 'var(--success-color)';
+                        setTimeout(() => {
+                            // Remove the item from the list
+                            const item = button.closest('.failed-download-item');
+                            if (item) item.remove();
+                            // Reload the failed downloads list
+                            this.loadFailedDownloads();
+                        }, 1000);
+                    } else {
+                        button.innerHTML = '<i class="ri-error-warning-line"></i> Failed';
+                        button.style.background = 'var(--error-color)';
+                        setTimeout(() => {
+                            button.innerHTML = '<i class="ri-refresh-line"></i> Retry';
+                            button.style.background = '';
+                            button.disabled = false;
+                        }, 2000);
+                    }
+                } catch (error) {
+                    console.error('Error retrying failed download:', error);
+                    button.innerHTML = '<i class="ri-error-warning-line"></i> Error';
+                    button.style.background = 'var(--error-color)';
+                    setTimeout(() => {
+                        button.innerHTML = '<i class="ri-refresh-line"></i> Retry';
+                        button.style.background = '';
+                        button.disabled = false;
+                    }, 2000);
+                }
+            });
+        });
+    }
+
+    getFailedItemIcon(type) {
+        switch (type) {
+            case 'pokemon':
+                return '<i class="ri-ghost-2-line"></i>';
+            case 'sprite':
+                return '<i class="ri-image-line"></i>';
+            case 'audio':
+                return '<i class="ri-volume-up-line"></i>';
+            default:
+                return '<i class="ri-error-warning-line"></i>';
+        }
+    }
+
+    formatTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} minutes ago`;
+        if (diffHours < 24) return `${diffHours} hours ago`;
+        if (diffDays < 7) return `${diffDays} days ago`;
+        return date.toLocaleDateString();
+    }
+
+    setupFailedDownloadsButtons() {
+        const retryAllBtn = document.getElementById('retry-all-failed');
+        const clearFailedBtn = document.getElementById('clear-failed-list');
+
+        if (retryAllBtn) {
+            retryAllBtn.addEventListener('click', async () => {
+                if (!window.pokemonAPI) return;
+
+                retryAllBtn.disabled = true;
+                retryAllBtn.innerHTML = '<i class="ri-loader-4-line"></i> Retrying All...';
+
+                try {
+                    const failedDownloads = window.pokemonAPI.getAllFailedDownloads();
+                    const allFailed = [
+                        ...failedDownloads.pokemon,
+                        ...failedDownloads.sprites,
+                        ...failedDownloads.audio
+                    ];
+
+                    let successCount = 0;
+                    for (const item of allFailed) {
+                        try {
+                            const result = await window.pokemonAPI.retryFailedDownload(item);
+                            if (result.success) successCount++;
+                        } catch (error) {
+                            console.error(`Error retrying ${item.name}:`, error);
+                        }
+                    }
+
+                    retryAllBtn.innerHTML = `<i class="ri-check-line"></i> Retried ${successCount}/${allFailed.length}`;
+                    setTimeout(() => {
+                        retryAllBtn.innerHTML = '<i class="ri-refresh-line"></i> Retry All Failed';
+                        retryAllBtn.disabled = false;
+                        this.loadFailedDownloads();
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error retrying all failed downloads:', error);
+                    retryAllBtn.innerHTML = '<i class="ri-error-warning-line"></i> Error';
+                    setTimeout(() => {
+                        retryAllBtn.innerHTML = '<i class="ri-refresh-line"></i> Retry All Failed';
+                        retryAllBtn.disabled = false;
+                    }, 2000);
+                }
+            });
+        }
+
+        if (clearFailedBtn) {
+            clearFailedBtn.addEventListener('click', () => {
+                if (!window.pokemonAPI) return;
+
+                if (confirm('Are you sure you want to clear the failed downloads list? This will remove the record of failed items but won\'t fix the underlying issues.')) {
+                    window.pokemonAPI.clearFailedDownloads('all');
+                    this.loadFailedDownloads();
                 }
             });
         }

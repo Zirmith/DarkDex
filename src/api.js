@@ -7,6 +7,7 @@ class PokemonAPI {
         this.failedPokemon = [];
         this.failedSprites = [];
         this.failedAudio = [];
+        this.failedForms = [];
         this.setupOfflineDetection();
     }
 
@@ -409,6 +410,9 @@ class PokemonAPI {
         if (!this.failedAudio) {
             this.failedAudio = [];
         }
+        if (!this.failedForms) {
+            this.failedForms = [];
+        }
     }
 
     // Add failed Pokemon to tracking
@@ -457,13 +461,30 @@ class PokemonAPI {
         }
     }
 
+    // Add failed form to tracking
+    addFailedForm(pokemon, formName, error) {
+        const failedEntry = {
+            id: pokemon.id || pokemon.name,
+            name: pokemon.name,
+            formName: formName,
+            error: error.message || error,
+            timestamp: new Date().toISOString(),
+            type: 'form'
+        };
+        
+        if (!this.failedForms.find(p => p.id === failedEntry.id && p.formName === formName)) {
+            this.failedForms.push(failedEntry);
+        }
+    }
+
     // Get all failed downloads
     getAllFailedDownloads() {
         return {
             pokemon: this.failedPokemon || [],
             sprites: this.failedSprites || [],
             audio: this.failedAudio || [],
-            total: (this.failedPokemon?.length || 0) + (this.failedSprites?.length || 0) + (this.failedAudio?.length || 0)
+            forms: this.failedForms || [],
+            total: (this.failedPokemon?.length || 0) + (this.failedSprites?.length || 0) + (this.failedAudio?.length || 0) + (this.failedForms?.length || 0)
         };
     }
 
@@ -479,11 +500,15 @@ class PokemonAPI {
             case 'audio':
                 this.failedAudio = [];
                 break;
+            case 'forms':
+                this.failedForms = [];
+                break;
             case 'all':
             default:
                 this.failedPokemon = [];
                 this.failedSprites = [];
                 this.failedAudio = [];
+                this.failedForms = [];
                 break;
         }
     }
@@ -515,6 +540,18 @@ class PokemonAPI {
                         await window.audioManager.playPokemonCry(failedItem.id);
                         this.failedAudio = this.failedAudio.filter(p => p.id !== failedItem.id);
                         return { success: true };
+                    }
+                    break;
+                case 'form':
+                    // This would need form data integration
+                    try {
+                        const formData = await this.fetchData(`https://pokeapi.co/api/v2/pokemon-form/${failedItem.formName}`, `form_${failedItem.formName}`);
+                        if (formData) {
+                            this.failedForms = this.failedForms.filter(p => p.id !== failedItem.id || p.formName !== failedItem.formName);
+                            return { success: true, data: formData };
+                        }
+                    } catch (error) {
+                        console.error(`Error retrying form ${failedItem.formName}:`, error);
                     }
                     break;
             }
