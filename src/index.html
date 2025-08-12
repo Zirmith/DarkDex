@@ -293,66 +293,98 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="cache-stats" id="cache-stats">
-                    <div class="loading-spinner">
-                        <i class="ri-loader-4-line"></i>
-                    </div>
-                    <p>Loading cache statistics...</p>
+                <!-- Cache Management Tabs -->
+                <div class="cache-tabs">
+                    <button class="cache-tab-btn active" data-cache-tab="statistics">
+                        <i class="ri-bar-chart-line"></i> Statistics
+                    </button>
+                    <button class="cache-tab-btn" data-cache-tab="actions">
+                        <i class="ri-settings-3-line"></i> Actions
+                    </button>
+                    <button class="cache-tab-btn" data-cache-tab="failed">
+                        <i class="ri-error-warning-line"></i> Failed Downloads
+                        <span class="failed-badge" id="failed-badge" style="display: none;">0</span>
+                    </button>
                 </div>
-                <div class="cache-actions" style="margin-top: 24px; display: none;" id="cache-actions">
-                    <div class="cache-action-group">
-                        <h4>Clear Cache</h4>
-                        <div class="cache-buttons">
-                            <button id="clear-data-cache" class="btn-secondary">
-                                <i class="ri-database-line"></i> Clear Data Cache
-                            </button>
-                            <button id="clear-sprite-cache" class="btn-secondary">
-                                <i class="ri-image-line"></i> Clear Sprite Cache
-                            </button>
-                            <button id="clear-audio-cache" class="btn-secondary">
-                                <i class="ri-volume-up-line"></i> Clear Audio Cache
-                            </button>
-                            <button id="clear-all-cache" class="btn-secondary" style="background: var(--error-color); color: white; border-color: var(--error-color);">
-                                <i class="ri-delete-bin-line"></i> Clear All Cache
-                            </button>
+
+                <!-- Statistics Tab -->
+                <div class="cache-tab-content active" id="cache-tab-statistics">
+                    <div class="cache-stats" id="cache-stats">
+                        <div class="loading-spinner">
+                            <i class="ri-loader-4-line"></i>
                         </div>
+                        <p>Loading cache statistics...</p>
                     </div>
                 </div>
-                <div class="failed-downloads-section" style="margin-top: 24px; display: none;" id="failed-downloads-section">
-                    <div class="failed-downloads-header">
-                        <h4><i class="ri-error-warning-line"></i> Failed Downloads</h4>
-                        <p class="failed-downloads-description">
-                            These items failed to download and can be retried. Failed downloads occur when there are network issues, 
-                            server problems, or missing resources.
-                        </p>
-                    </div>
-                    <div class="failed-downloads-stats" id="failed-downloads-stats">
-                        <div class="failed-stat-item">
-                            <i class="ri-ghost-2-line"></i>
-                            <span class="failed-stat-label">Pokémon Data</span>
-                            <span class="failed-stat-count" id="failed-pokemon-count">0</span>
+
+                <!-- Actions Tab -->
+                <div class="cache-tab-content" id="cache-tab-actions">
+                    <div class="cache-actions" id="cache-actions">
+                        <div class="cache-action-group">
+                            <h4><i class="ri-delete-bin-line"></i> Clear Cache</h4>
+                            <p class="cache-action-description">
+                                Clear cached data to free up disk space. This will require re-downloading content when accessed again.
+                            </p>
+                            <div class="cache-buttons">
+                                <button id="clear-data-cache" class="btn-secondary">
+                                    <i class="ri-database-line"></i> Clear Data Cache
+                                </button>
+                                <button id="clear-sprite-cache" class="btn-secondary">
+                                    <i class="ri-image-line"></i> Clear Sprite Cache
+                                </button>
+                                <button id="clear-audio-cache" class="btn-secondary">
+                                    <i class="ri-volume-up-line"></i> Clear Audio Cache
+                                </button>
+                            </div>
+                            <div class="cache-danger-zone">
+                                <h5><i class="ri-alert-line"></i> Danger Zone</h5>
+                                <p>This action will clear all cached data and cannot be undone.</p>
+                                <button id="clear-all-cache" class="btn-danger">
+                                    <i class="ri-delete-bin-line"></i> Clear All Cache
+                                </button>
+                            </div>
                         </div>
-                        <div class="failed-stat-item">
-                            <i class="ri-image-line"></i>
-                            <span class="failed-stat-label">Sprites</span>
-                            <span class="failed-stat-count" id="failed-sprites-count">0</span>
-                        </div>
-                        <div class="failed-stat-item">
-                            <i class="ri-volume-up-line"></i>
-                            <span class="failed-stat-label">Audio</span>
-                            <span class="failed-stat-count" id="failed-audio-count">0</span>
-                        </div>
                     </div>
-                    <div class="failed-downloads-list" id="failed-downloads-list">
-                        <!-- Failed downloads will be populated here -->
-                    </div>
-                    <div class="failed-downloads-actions">
-                        <button id="retry-all-failed" class="btn-secondary">
-                            <i class="ri-refresh-line"></i> Retry All Failed
-                        </button>
-                        <button id="clear-failed-list" class="btn-secondary">
-                            <i class="ri-delete-bin-line"></i> Clear Failed List
-                        </button>
+                </div>
+
+                <!-- Failed Downloads Tab -->
+                <div class="cache-tab-content" id="cache-tab-failed">
+                    <div class="failed-downloads-section" id="failed-downloads-section">
+                        <div class="failed-downloads-header">
+                            <h4><i class="ri-error-warning-line"></i> Failed Downloads</h4>
+                            <p class="failed-downloads-description">
+                                These items failed to download and can be retried. Failed downloads occur when there are network issues, 
+                                server problems, or missing resources.
+                            </p>
+                        </div>
+                        <div class="failed-downloads-stats" id="failed-downloads-stats">
+                            <div class="failed-stat-item">
+                                <i class="ri-ghost-2-line"></i>
+                                <span class="failed-stat-label">Pokémon Data</span>
+                                <span class="failed-stat-count" id="failed-pokemon-count">0</span>
+                            </div>
+                            <div class="failed-stat-item">
+                                <i class="ri-image-line"></i>
+                                <span class="failed-stat-label">Sprites</span>
+                                <span class="failed-stat-count" id="failed-sprites-count">0</span>
+                            </div>
+                            <div class="failed-stat-item">
+                                <i class="ri-volume-up-line"></i>
+                                <span class="failed-stat-label">Audio</span>
+                                <span class="failed-stat-count" id="failed-audio-count">0</span>
+                            </div>
+                        </div>
+                        <div class="failed-downloads-list" id="failed-downloads-list">
+                            <!-- Failed downloads will be populated here -->
+                        </div>
+                        <div class="failed-downloads-actions">
+                            <button id="retry-all-failed" class="btn-secondary">
+                                <i class="ri-refresh-line"></i> Retry All Failed
+                            </button>
+                            <button id="clear-failed-list" class="btn-secondary">
+                                <i class="ri-delete-bin-line"></i> Clear Failed List
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
