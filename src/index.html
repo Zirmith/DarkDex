@@ -400,6 +400,7 @@ const tabContents = document.querySelectorAll('.cache-tab-content');
 tabButtons.forEach(button => {
   button.addEventListener('click', () => {
     const targetTab = button.getAttribute('data-cache-tab'); // e.g. 'statistics'
+    console.log(targetTab)
 
     // Remove 'active' class from all buttons and contents
     tabButtons.forEach(btn => btn.classList.remove('active'));
