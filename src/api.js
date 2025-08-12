@@ -4,6 +4,9 @@ class PokemonAPI {
         this.cache = new Map();
         this.isOnline = navigator.onLine;
         this.cacheStats = { hits: 0, misses: 0, errors: 0 };
+        this.failedPokemon = [];
+        this.failedSprites = [];
+        this.failedAudio = [];
         this.setupOfflineDetection();
     }
 
@@ -269,9 +272,7 @@ class PokemonAPI {
                         console.error(`Error fetching ${pokemon.name}:`, error);
                         failedPokemon.push(pokemon);
                         // Add to failed list for retry functionality
-                        if (!this.failedPokemon.find(p => p.name === pokemon.name)) {
-                            this.failedPokemon.push(pokemon);
-                        }
+                        this.addFailedPokemon(pokemon, error);
                         return null;
                     }
                 });
@@ -412,7 +413,6 @@ class PokemonAPI {
 
     // Add failed Pokemon to tracking
     addFailedPokemon(pokemon, error) {
-        this.initializeFailedTracking();
         const failedEntry = {
             id: pokemon.id || pokemon.name,
             name: pokemon.name,
@@ -429,7 +429,6 @@ class PokemonAPI {
 
     // Add failed sprite to tracking
     addFailedSprite(pokemon, error) {
-        this.initializeFailedTracking();
         const failedEntry = {
             id: pokemon.id || pokemon.name,
             name: pokemon.name,
@@ -445,7 +444,6 @@ class PokemonAPI {
 
     // Add failed audio to tracking
     addFailedAudio(pokemon, error) {
-        this.initializeFailedTracking();
         const failedEntry = {
             id: pokemon.id || pokemon.name,
             name: pokemon.name,
@@ -461,7 +459,6 @@ class PokemonAPI {
 
     // Get all failed downloads
     getAllFailedDownloads() {
-        this.initializeFailedTracking();
         return {
             pokemon: this.failedPokemon || [],
             sprites: this.failedSprites || [],
@@ -472,7 +469,6 @@ class PokemonAPI {
 
     // Clear failed downloads
     clearFailedDownloads(type = 'all') {
-        this.initializeFailedTracking();
         switch (type) {
             case 'pokemon':
                 this.failedPokemon = [];

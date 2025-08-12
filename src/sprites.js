@@ -1,14 +1,26 @@
 class SpriteManager {
     constructor() {
         this.spriteCache = new Map();
+        this.isInitialized = false;
         this.config = {
             animated: false,
             shiny: false,
             showdown: false
         };
         this.splashSpriteCache = new Map();
-        this.setupControls();
-        this.cacheSplashSprite();
+        this.init();
+    }
+
+    async init() {
+        try {
+            this.setupControls();
+            await this.cacheSplashSprite();
+            this.isInitialized = true;
+            console.log('SpriteManager initialized successfully');
+        } catch (error) {
+            console.error('Error initializing SpriteManager:', error);
+            this.isInitialized = true; // Set to true anyway to prevent blocking
+        }
     }
 
     async cacheSplashSprite() {
