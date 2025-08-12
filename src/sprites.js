@@ -313,10 +313,6 @@ class SpriteManager {
         return { size: 0, files: 0 };
     }
 
-        // Track failed sprite
-        if (window.pokemonAPI) {
-            window.pokemonAPI.addFailedSprite(pokemon, error);
-        }
     clearCache() {
         this.spriteCache.clear();
         this.splashSpriteCache.clear();
