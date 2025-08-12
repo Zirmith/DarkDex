@@ -57,8 +57,11 @@ function createWindow() {
 
 function createUpdaterWindow() {
   updaterWindow = new BrowserWindow({
-    width: 506,
-    height: 600,
+   width: 540,
+  height: 680,
+  minWidth: 480,
+  minHeight: 600,
+  transparent: true,
     frame: false,
     resizable: false,
     webPreferences: {
