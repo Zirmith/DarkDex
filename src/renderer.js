@@ -940,6 +940,7 @@ class DarkDexApp {
             console.error('Error loading failed downloads:', error);
             failedDownloadsSection.style.display = 'none';
         }
+        window.loadFailedDownloads = this.loadFailedDownloads.bind(this);
     }
 
     renderFailedDownloadsList(failedDownloads) {
@@ -1130,6 +1131,8 @@ class DarkDexApp {
             });
         }
     }
+
+    
 
     async showCacheManagement() {
         const modal = document.getElementById('cache-modal');
@@ -1721,6 +1724,7 @@ class DarkDexApp {
                 if (allPokemon && allPokemon.length > 0) {
                     this.allPokemonData = allPokemon;
                     window.searchManager.setPokemonData(allPokemon);
+                    
                     this.updateLoadingStatus(`Loaded ${allPokemon.length} Pokémon successfully!`);
                 } else {
                     throw new Error('No Pokemon data received');
@@ -2369,14 +2373,14 @@ Errors: ${stats.performance.errors}`;
             clearFailedBtn.addEventListener('click', () => {
                 if (confirm('Are you sure you want to clear the failed downloads list?')) {
                     window.pokemonAPI.clearFailedDownloads();
-                    this.loadFailedDownloads();
+                    window.pokemonAPI.loadFailedDownloads();
                     this.showNotification('Failed downloads list cleared', 'success');
                 }
             });
         }
         
         // Setup tab switching
-        this.setupCacheTabSwitching();
+       // this.setupCacheTabSwitching();
     }
 });
 
