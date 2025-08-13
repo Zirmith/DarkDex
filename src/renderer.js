@@ -445,6 +445,46 @@ class DarkDexApp {
         });
     }
 
+    // Cache Management Tab Switching
+    setupCacheTabSwitching() {
+        const tabButtons = document.querySelectorAll('.cache-tab-btn');
+        const tabContents = document.querySelectorAll('.cache-tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.getAttribute('data-cache-tab');
+                
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    content.style.opacity = '0';
+                });
+
+                // Activate clicked button
+                button.classList.add('active');
+
+                // Activate corresponding content with fade-in
+                const activeContent = document.getElementById(`cache-tab-${targetTab}`);
+                if (activeContent) {
+                    activeContent.classList.add('active');
+                    
+                    // Smooth fade-in
+                    setTimeout(() => {
+                        activeContent.style.opacity = '1';
+                    }, 50);
+                    
+                    // Load content based on tab
+                    if (targetTab === 'statistics') {
+                        this.loadCacheStatistics();
+                    } else if (targetTab === 'failed') {
+                        this.loadFailedDownloads();
+                    }
+                }
+            });
+        });
+    }
+
     setupCacheManagement() {
         const cacheBtn = document.getElementById('cache-management');
         const cacheModal = document.getElementById('cache-modal');
@@ -454,6 +494,7 @@ class DarkDexApp {
         const failedDownloadsSection = document.getElementById('failed-downloads-section');
 
         if (cacheBtn) {
+                this.loadFailedDownloads();
             cacheBtn.addEventListener('click', async () => {
                 cacheModal.style.display = 'flex';
                 await this.loadCacheStats();
@@ -1011,6 +1052,8 @@ class DarkDexApp {
     
     updateFailedDownloadsDisplay(failedDownloads) {
         // Update stats
+        const retryAllBtn = document.getElementById('retry-all-failed');
+        const clearFailedBtn = document.getElementById('clear-failed-list');
         const pokemonCount = document.getElementById('failed-pokemon-count');
         const spritesCount = document.getElementById('failed-sprites-count');
         const audioCount = document.getElementById('failed-audio-count');
@@ -2088,6 +2131,25 @@ Errors: ${stats.performance.errors}`;
                 }
             });
         }
+        
+        if (retryAllBtn) {
+            retryAllBtn.addEventListener('click', async () => {
+                await this.retryAllFailedDownloads();
+            });
+        }
+        
+        if (clearFailedBtn) {
+            clearFailedBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to clear the failed downloads list?')) {
+                    window.pokemonAPI.clearFailedDownloads();
+                    this.loadFailedDownloads();
+                    this.showNotification('Failed downloads list cleared', 'success');
+                }
+            });
+        }
+        
+        // Setup tab switching
+        this.setupCacheTabSwitching();
     }
 });
 

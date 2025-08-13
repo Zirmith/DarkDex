@@ -242,10 +242,15 @@ class PokemonAPI {
                             if (details.forms && details.forms.length > 1) {
                                 const formPromises = details.forms.map(async (form) => {
                                     try {
-                                        const formData = await this.fetchData(form.url, `form_${form.name}`);
+                                        // Extract form name from URL or use the form name directly
+                                        const formName = form.name || form.url.split('/').slice(-2, -1)[0];
+                                        const formData = await this.fetchData(form.url, `form_${formName}`);
                                         return formData;
                                     } catch (error) {
-                                        console.warn(`Could not fetch form ${form.name}:`, error);
+                                        const formName = form.name || 'unknown';
+                                        console.warn(`Could not fetch form ${formName}:`, error);
+                                        // Track failed form
+                                        this.addFailedForm(pokemon, formName, error);
                                         return null;
                                     }
                                 });
@@ -358,10 +363,17 @@ class PokemonAPI {
                         if (details.forms && details.forms.length > 1) {
                             const formPromises = details.forms.map(async (form) => {
                                 try {
-                                    const formData = await this.fetchData(form.url, `form_${form.name}`);
+                                    // Extract form name from URL or use the form name directly
+                                    const formName = form.name || form.url.split('/').slice(-2, -1)[0];
+                                    const formData = await this.fetchData(form.url, `form_${formName}`);
                                     return formData;
                                 } catch (error) {
-                                    console.warn(`Could not fetch form ${form.name}:`, error);
+                                    const formName = form.name || 'unknown';
+                                    console.warn(`Could not fetch form ${formName}:`, error);
+                                    // Track failed form
+                                    if (window.pokemonAPI) {
+                                        window.pokemonAPI.addFailedForm(pokemon, formName, error);
+                                    }
                                     return null;
                                 }
                             });
@@ -518,40 +530,75 @@ class PokemonAPI {
         try {
             switch (failedItem.type) {
                 case 'pokemon':
-                    const pokemonData = await this.getCompletePokemonData(failedItem.id);
+                    // Use name if available, otherwise use ID
+                    const identifier = failedItem.name || failedItem.id;
+                    const pokemonData = await this.getCompletePokemonData(identifier);
                     if (pokemonData) {
                         // Remove from failed list
-                        this.failedPokemon = this.failedPokemon.filter(p => p.id !== failedItem.id);
+                        this.failedPokemon = this.failedPokemon.filter(p => 
+                            p.id !== failedItem.id && p.name !== failedItem.name
+                        );
                         return { success: true, data: pokemonData };
                     }
                     break;
                 case 'sprite':
                     // This would need sprite manager integration
                     if (window.spriteManager) {
-                        const pokemon = { id: failedItem.id, name: failedItem.name };
-                        await window.spriteManager.loadSprite(pokemon);
-                        this.failedSprites = this.failedSprites.filter(p => p.id !== failedItem.id);
+                        const pokemon = { 
+                            id: failedItem.id, 
+                            name: failedItem.name,
+                            sprites: { front_default: null } // Minimal sprite object
+                        };
+                        const spriteUrl = await window.spriteManager.loadSprite(pokemon);
+                        if (spriteUrl) {
+                            this.failedSprites = this.failedSprites.filter(p => 
+                                p.id !== failedItem.id && p.name !== failedItem.name
+                            );
+                            return { success: true };
+                        }
                         return { success: true };
                     }
                     break;
                 case 'audio':
                     // This would need audio manager integration
                     if (window.audioManager) {
-                        await window.audioManager.playPokemonCry(failedItem.id);
-                        this.failedAudio = this.failedAudio.filter(p => p.id !== failedItem.id);
-                        return { success: true };
+                        try {
+                            await window.audioManager.playPokemonCry(failedItem.id);
+                            this.failedAudio = this.failedAudio.filter(p => 
+                                p.id !== failedItem.id && p.name !== failedItem.name
+                            );
+                            return { success: true };
+                        } catch (error) {
+                            console.error(`Audio retry failed for ${failedItem.name}:`, error);
+                            return { success: false, error: error.message };
+                        }
                     }
                     break;
                 case 'form':
-                    // This would need form data integration
+                    // Fix form URL construction to use proper PokéAPI v2 endpoints
                     try {
-                        const formData = await this.fetchData(`https://pokeapi.co/api/v2/pokemon-form/${failedItem.formName}`, `form_${failedItem.formName}`);
+                        // Use pokemon-form endpoint with proper ID/name
+                        let formUrl;
+                        if (failedItem.formName) {
+                            // Use the form name directly
+                            formUrl = `${this.baseUrl}/pokemon-form/${failedItem.formName}`;
+                        } else if (failedItem.id) {
+                            // Fallback to pokemon ID
+                            formUrl = `${this.baseUrl}/pokemon/${failedItem.id}`;
+                        } else {
+                            throw new Error('No valid form identifier');
+                        }
+                        
+                        const formData = await this.fetchData(formUrl, `form_${failedItem.formName || failedItem.id}`);
                         if (formData) {
-                            this.failedForms = this.failedForms.filter(p => p.id !== failedItem.id || p.formName !== failedItem.formName);
+                            this.failedForms = this.failedForms.filter(p => 
+                                !(p.id === failedItem.id && p.formName === failedItem.formName)
+                            );
                             return { success: true, data: formData };
                         }
                     } catch (error) {
-                        console.error(`Error retrying form ${failedItem.formName}:`, error);
+                        console.error(`Error retrying form ${failedItem.formName || failedItem.id}:`, error);
+                        return { success: true };
                     }
                     break;
             }

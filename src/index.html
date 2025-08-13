@@ -392,44 +392,6 @@
     </div>
 
 
-<script>
-    // Grab all tab buttons and content sections
-const tabButtons = document.querySelectorAll('.cache-tab-btn');
-const tabContents = document.querySelectorAll('.cache-tab-content');
-
-tabButtons.forEach(button => {
-  button.addEventListener('click', () => {
-    const targetTab = button.getAttribute('data-cache-tab'); // e.g. 'statistics'
-    console.log(targetTab)
-
-    // Remove 'active' class from all buttons and contents
-    tabButtons.forEach(btn => btn.classList.remove('active'));
-    tabContents.forEach(content => {
-      // Fade out current active content
-      if(content.classList.contains('active')) {
-        content.classList.remove('active');
-        content.style.opacity = 0;
-      }
-    });
-
-    // Activate clicked button
-    button.classList.add('active');
-
-    // Activate corresponding content with fade-in
-    const activeContent = document.getElementById(`cache-tab-${targetTab}`);
-    activeContent.classList.add('active');
-    activeContent.style.opacity = 0;
-
-    // Smooth fade-in (delay for effect)
-    setTimeout(() => {
-      activeContent.style.transition = 'opacity 0.3s ease';
-      activeContent.style.opacity = 1;
-    }, 50);
-  });
-});
-
-</script>
-
     <!-- Scripts -->
     <script src="api.js"></script>
     <script src="sprites.js"></script>

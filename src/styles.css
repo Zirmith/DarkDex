@@ -911,6 +911,359 @@ body {
   box-shadow: var(--shadow-xl);
   overflow: hidden;
   animation: modalSlideIn 0.3s ease;
+/* Cache Management Modal Styles */
+.cache-tabs {
+    display: flex;
+    background: rgba(15, 23, 42, 0.8);
+    border-radius: 10px 10px 0 0;
+    border-bottom: 2px solid rgba(139, 69, 255, 0.3);
+    margin: 0;
+    padding: 0;
+}
+
+.cache-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    padding: 15px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    border-radius: 10px 10px 0 0;
+}
+
+.cache-tab-btn:first-child {
+    border-radius: 10px 0 0 0;
+}
+
+.cache-tab-btn:last-child {
+    border-radius: 0 10px 0 0;
+}
+
+.cache-tab-btn:hover {
+    background: rgba(139, 69, 255, 0.1);
+    color: #e2e8f0;
+}
+
+.cache-tab-btn.active {
+    background: rgba(139, 69, 255, 0.2);
+    color: #8b45ff;
+    border-bottom: 3px solid #8b45ff;
+}
+
+.cache-tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #8b45ff;
+    box-shadow: 0 0 10px rgba(139, 69, 255, 0.5);
+}
+
+.failed-badge {
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+}
+
+.cache-tab-content {
+    display: none;
+    padding: 25px;
+    min-height: 300px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.cache-tab-content.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Cache Statistics Styles */
+.cache-stats {
+    display: grid;
+    gap: 20px;
+}
+
+.cache-stat-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(139, 69, 255, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s ease;
+}
+
+.cache-stat-card:hover {
+    border-color: rgba(139, 69, 255, 0.5);
+    box-shadow: 0 0 20px rgba(139, 69, 255, 0.2);
+}
+
+.cache-stat-icon {
+    font-size: 2.5rem;
+    color: #8b45ff;
+    min-width: 60px;
+    text-align: center;
+}
+
+.cache-stat-info {
+    flex: 1;
+}
+
+.cache-stat-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 5px;
+}
+
+.cache-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #8b45ff;
+    margin-bottom: 3px;
+}
+
+.cache-stat-details {
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+/* Cache Actions Styles */
+.cache-action-group {
+    margin-bottom: 30px;
+}
+
+.cache-action-group h4 {
+    color: #e2e8f0;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+}
+
+.cache-action-description {
+    color: #94a3b8;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.cache-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.cache-danger-zone {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 30px;
+}
+
+.cache-danger-zone h5 {
+    color: #ef4444;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+}
+
+.cache-danger-zone p {
+    color: #fca5a5;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Failed Downloads Styles */
+.failed-downloads-header h4 {
+    color: #e2e8f0;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+}
+
+.failed-downloads-description {
+    color: #94a3b8;
+    margin-bottom: 25px;
+    line-height: 1.5;
+}
+
+.failed-downloads-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.failed-stat-item {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+}
+
+.failed-stat-item i {
+    font-size: 2rem;
+    color: #ef4444;
+}
+
+.failed-stat-label {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.failed-stat-count {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ef4444;
+}
+
+.failed-downloads-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border: 1px solid rgba(139, 69, 255, 0.2);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.4);
+}
+
+.failed-download-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(139, 69, 255, 0.1);
+    transition: background 0.2s ease;
+}
+
+.failed-download-item:hover {
+    background: rgba(139, 69, 255, 0.1);
+}
+
+.failed-download-item:last-child {
+    border-bottom: none;
+}
+
+.failed-download-info {
+    flex: 1;
+}
+
+.failed-download-name {
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 3px;
+}
+
+.failed-download-type {
+    font-size: 12px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.failed-download-error {
+    font-size: 11px;
+    color: #ef4444;
+    margin-top: 2px;
+}
+
+.failed-download-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.retry-btn {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #10b981;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+    background: rgba(16, 185, 129, 0.3);
+    border-color: rgba(16, 185, 129, 0.6);
+}
+
+.failed-downloads-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.no-failed-downloads {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+}
+
+.no-failed-downloads i {
+    font-size: 3rem;
+    color: #10b981;
+    margin-bottom: 15px;
+}
+
+.no-failed-downloads h4 {
+    color: #10b981;
+    margin-bottom: 8px;
+}
+
 }
 
 @keyframes modalSlideIn {
