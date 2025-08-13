@@ -447,43 +447,46 @@ class DarkDexApp {
 
     // Cache Management Tab Switching
     setupCacheTabSwitching() {
-        const tabButtons = document.querySelectorAll('.cache-tab-btn');
-        const tabContents = document.querySelectorAll('.cache-tab-content');
-
-        tabButtons.forEach(button => {
+        const tabs = {
+            statistics: {
+                button: document.getElementById('cache-btn-statistics'),
+                content: document.getElementById('cache-tab-statistics')
+            },
+            actions: {
+                button: document.getElementById('cache-btn-actions'),
+                content: document.getElementById('cache-tab-actions')
+            },
+            failed: {
+                button: document.getElementById('cache-btn-failed'),
+                content: document.getElementById('cache-tab-failed')
+            }
+        };
+    
+        Object.keys(tabs).forEach(tabKey => {
+            const { button, content } = tabs[tabKey];
             button.addEventListener('click', () => {
-                const targetTab = button.getAttribute('data-cache-tab');
-                
-                // Remove active class from all buttons and contents
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => {
+                // Hide all
+                Object.values(tabs).forEach(({ button, content }) => {
+                    button.classList.remove('active');
                     content.classList.remove('active');
                     content.style.opacity = '0';
                 });
-
-                // Activate clicked button
+    
+                // Show selected
                 button.classList.add('active');
-
-                // Activate corresponding content with fade-in
-                const activeContent = document.getElementById(`cache-tab-${targetTab}`);
-                if (activeContent) {
-                    activeContent.classList.add('active');
-                    
-                    // Smooth fade-in
-                    setTimeout(() => {
-                        activeContent.style.opacity = '1';
-                    }, 50);
-                    
-                    // Load content based on tab
-                    if (targetTab === 'statistics') {
-                        this.loadCacheStatistics();
-                    } else if (targetTab === 'failed') {
-                        this.loadFailedDownloads();
-                    }
+                content.classList.add('active');
+                setTimeout(() => content.style.opacity = '1', 50);
+    
+                // Load data if needed
+                if (tabKey === 'statistics') {
+                    this.loadCacheStatistics();
+                } else if (tabKey === 'failed') {
+                    this.loadFailedDownloads();
                 }
             });
         });
     }
+    
 
     async loadCacheStatistics() {
         const cacheStatsEl = document.getElementById('cache-stats');
