@@ -485,6 +485,230 @@ class DarkDexApp {
         });
     }
 
+    async loadCacheStatistics() {
+        const cacheStatsEl = document.getElementById('cache-stats');
+        if (!cacheStatsEl) return;
+        
+        try {
+            const stats = await window.pokemonAPI.getCacheStats();
+            
+            cacheStatsEl.innerHTML = `
+                <div class="cache-stat-card">
+                    <div class="cache-stat-icon">
+                        <i class="ri-database-line"></i>
+                    </div>
+                    <div class="cache-stat-info">
+                        <div class="cache-stat-label">Data Cache</div>
+                        <div class="cache-stat-value">${window.pokemonAPI.formatBytes(stats.data.size)}</div>
+                        <div class="cache-stat-details">${stats.data.files} files</div>
+                    </div>
+                </div>
+                <div class="cache-stat-card">
+                    <div class="cache-stat-icon">
+                        <i class="ri-image-line"></i>
+                    </div>
+                    <div class="cache-stat-info">
+                        <div class="cache-stat-label">Sprite Cache</div>
+                        <div class="cache-stat-value">${window.pokemonAPI.formatBytes(stats.sprites.size)}</div>
+                        <div class="cache-stat-details">${stats.sprites.files} files</div>
+                    </div>
+                </div>
+                <div class="cache-stat-card">
+                    <div class="cache-stat-icon">
+                        <i class="ri-volume-up-line"></i>
+                    </div>
+                    <div class="cache-stat-info">
+                        <div class="cache-stat-label">Audio Cache</div>
+                        <div class="cache-stat-value">${window.pokemonAPI.formatBytes(stats.audio.size)}</div>
+                        <div class="cache-stat-details">${stats.audio.files} files</div>
+                    </div>
+                </div>
+                <div class="cache-stat-card">
+                    <div class="cache-stat-icon">
+                        <i class="ri-hard-drive-line"></i>
+                    </div>
+                    <div class="cache-stat-info">
+                        <div class="cache-stat-label">Total Cache</div>
+                        <div class="cache-stat-value">${window.pokemonAPI.formatBytes(stats.total.size)}</div>
+                        <div class="cache-stat-details">${stats.total.files} files total</div>
+                    </div>
+                </div>
+            `;
+            
+            if (stats.performance) {
+                cacheStatsEl.innerHTML += `
+                    <div class="cache-stat-card">
+                        <div class="cache-stat-icon">
+                            <i class="ri-speed-line"></i>
+                        </div>
+                        <div class="cache-stat-info">
+                            <div class="cache-stat-label">Performance</div>
+                            <div class="cache-stat-value">${Math.round((stats.performance.hits / (stats.performance.hits + stats.performance.misses)) * 100) || 0}%</div>
+                            <div class="cache-stat-details">Hit rate (${stats.performance.hits} hits, ${stats.performance.misses} misses)</div>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading cache statistics:', error);
+            cacheStatsEl.innerHTML = `
+                <div class="error-message">
+                    <i class="ri-error-warning-line"></i>
+                    <p>Error loading cache statistics</p>
+                </div>
+            `;
+        }
+    }
+    
+    async loadFailedDownloads() {
+        const failedDownloadsEl = document.getElementById('failed-downloads-list');
+        const failedStatsEl = document.getElementById('failed-downloads-stats');
+        const failedBadge = document.getElementById('failed-badge');
+        
+        if (!failedDownloadsEl || !window.pokemonAPI) return;
+        
+        try {
+            const failedDownloads = window.pokemonAPI.getAllFailedDownloads();
+            
+            // Update stats
+            document.getElementById('failed-pokemon-count').textContent = failedDownloads.pokemon.length;
+            document.getElementById('failed-sprites-count').textContent = failedDownloads.sprites.length;
+            document.getElementById('failed-audio-count').textContent = failedDownloads.audio.length;
+            
+            // Update badge
+            if (failedDownloads.total > 0) {
+                failedBadge.textContent = failedDownloads.total;
+                failedBadge.style.display = 'flex';
+            } else {
+                failedBadge.style.display = 'none';
+            }
+            
+            // Create failed downloads list
+            if (failedDownloads.total === 0) {
+                failedDownloadsEl.innerHTML = `
+                    <div class="no-failed-downloads">
+                        <i class="ri-check-double-line"></i>
+                        <h4>All Downloads Successful!</h4>
+                        <p>No failed downloads to retry.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let failedHtml = '';
+            
+            // Add all failed items
+            const allFailed = [
+                ...failedDownloads.pokemon,
+                ...failedDownloads.sprites,
+                ...failedDownloads.audio,
+                ...failedDownloads.forms
+            ];
+            
+            allFailed.forEach(item => {
+                const displayName = item.name ? 
+                    item.name.charAt(0).toUpperCase() + item.name.slice(1) : 
+                    `ID: ${item.id}`;
+                    
+                failedHtml += `
+                    <div class="failed-download-item">
+                        <div class="failed-download-info">
+                            <div class="failed-download-name">${displayName}</div>
+                            <div class="failed-download-type">${item.type}</div>
+                            <div class="failed-download-error">${item.error}</div>
+                        </div>
+                        <div class="failed-download-actions">
+                            <button class="retry-btn" onclick="window.darkdexApp.retryFailedDownload('${item.type}', '${item.id}', '${item.name || ''}', '${item.formName || ''}')">
+                                <i class="ri-refresh-line"></i> Retry
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            failedDownloadsEl.innerHTML = failedHtml;
+            
+        } catch (error) {
+            console.error('Error loading failed downloads:', error);
+            failedDownloadsEl.innerHTML = `
+                <div class="error-message">
+                    <i class="ri-error-warning-line"></i>
+                    <p>Error loading failed downloads</p>
+                </div>
+            `;
+        }
+    }
+    
+    async retryFailedDownload(type, id, name, formName) {
+        try {
+            const failedItem = {
+                type: type,
+                id: id,
+                name: name,
+                formName: formName || undefined
+            };
+            
+            const result = await window.pokemonAPI.retryFailedDownload(failedItem);
+            
+            if (result.success) {
+                this.showNotification(`Successfully retried ${name || id}`, 'success');
+                this.loadFailedDownloads(); // Refresh the list
+            } else {
+                this.showNotification(`Failed to retry ${name || id}: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error retrying download:', error);
+            this.showNotification(`Error retrying download: ${error.message}`, 'error');
+        }
+    }
+    
+    async retryAllFailedDownloads() {
+        try {
+            const failedDownloads = window.pokemonAPI.getAllFailedDownloads();
+            const allFailed = [
+                ...failedDownloads.pokemon,
+                ...failedDownloads.sprites,
+                ...failedDownloads.audio,
+                ...failedDownloads.forms
+            ];
+            
+            if (allFailed.length === 0) {
+                this.showNotification('No failed downloads to retry', 'info');
+                return;
+            }
+            
+            this.showNotification(`Retrying ${allFailed.length} failed downloads...`, 'info');
+            
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (const item of allFailed) {
+                try {
+                    const result = await window.pokemonAPI.retryFailedDownload(item);
+                    if (result.success) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    failCount++;
+                    console.error(`Error retrying ${item.name || item.id}:`, error);
+                }
+                
+                // Small delay between retries
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            this.loadFailedDownloads(); // Refresh the list
+            this.showNotification(`Retry complete: ${successCount} successful, ${failCount} failed`, 
+                successCount > failCount ? 'success' : 'warning');
+                
+        } catch (error) {
+            console.error('Error retrying all failed downloads:', error);
+            this.showNotification(`Error retrying downloads: ${error.message}`, 'error');
+        }
+    }
+
     setupCacheManagement() {
         const cacheBtn = document.getElementById('cache-management');
         const cacheModal = document.getElementById('cache-modal');
