@@ -203,84 +203,96 @@ class PokemonAPI {
             
             for (let i = 0; i < maxToProcess; i += batchSize) {
                 const batch = pokemonList.results.slice(i, Math.min(i + batchSize, maxToProcess));
-                const batchPromises = batch.map(async (pokemon) => {
+                const batchPromises = batch.map(async (pokemon, index) => {
+                    const processedCount = Math.min(i + index + 1, maxToProcess);
+
+                    // Update loading status with current Pokemon name
+                    const pokemonName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+                    if (window.darkdexApp) {
+                        window.darkdexApp.updateLoadingStatus(`Loading ${pokemonName}... (${processedCount}/${maxToProcess})`);
+                    }
+
+                    let details;
                     try {
-                        // Update loading status with current Pokemon name
-                        const pokemonName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
-                        if (window.darkdexApp) {
-                            window.darkdexApp.updateLoadingStatus(`Loading ${pokemonName}... (${detailedPokemon.length + 1}/${maxToProcess})`);
-                        }
-                        
-                        // Cache individual Pokemon data
-                        const details = await this.getPokemon(pokemon.name);
-                        if (!details) return null;
-                        
-                        const species = await this.getPokemonSpecies(pokemon.name);
-                        
-                        // Get additional data
-                        let encounters = [];
-                        try {
-                            encounters = await this.getPokemonEncounters(details.id);
-                        } catch (error) {
-                            console.warn(`Could not fetch encounters for ${pokemon.name}:`, error);
-                        }
-                        
-                        // Get evolution chain if available
-                        let evolutionChain = null;
-                        if (species && species.evolution_chain?.url) {
-                            const evolutionId = species.evolution_chain.url.split('/').slice(-2, -1)[0];
-                            try {
-                                evolutionChain = await this.getEvolutionChain(evolutionId);
-                            } catch (error) {
-                                console.warn(`Could not fetch evolution chain for ${pokemon.name}:`, error);
-                            }
-                        }
-                        
-                        // Get forms data
-                        let forms = [];
-                        try {
-                            if (details.forms && details.forms.length > 1) {
-                                const formPromises = details.forms.map(async (form) => {
-                                    try {
-                                        // Extract form name from URL or use the form name directly
-                                        const formName = form.name || form.url.split('/').slice(-2, -1)[0];
-                                        const formData = await this.fetchData(form.url, `form_${formName}`);
-                                        return formData;
-                                    } catch (error) {
-                                        const formName = form.name || 'unknown';
-                                        console.warn(`Could not fetch form ${formName}:`, error);
-                                        // Track failed form
-                                        this.addFailedForm(pokemon, formName, error);
-                                        return null;
-                                    }
-                                });
-                                const formResults = await Promise.all(formPromises);
-                                forms = formResults.filter(f => f !== null);
-                            }
-                        } catch (error) {
-                            console.warn(`Could not fetch forms for ${pokemon.name}:`, error);
-                        }
-                        
-                        const completeData = { 
-                            ...details, 
-                            species: species || null,
-                            encounters: encounters || [],
-                            evolutionChain: evolutionChain || null,
-                            forms: forms || []
-                        };
-                        
-                        // Cache individual complete Pokemon data
-                        await this.cacheData(`complete_pokemon_${pokemon.name}`, completeData);
-                        await this.cacheData(`complete_pokemon_${details.id}`, completeData);
-                        
-                        return completeData;
+                        details = await this.getPokemon(pokemon.name);
                     } catch (error) {
-                        console.error(`Error fetching ${pokemon.name}:`, error);
+                        console.error(`Error fetching base data for ${pokemon.name}:`, error);
                         failedPokemon.push(pokemon);
-                        // Add to failed list for retry functionality
                         this.addFailedPokemon(pokemon, error);
                         return null;
                     }
+
+                    if (!details) {
+                        const error = new Error('No details returned');
+                        failedPokemon.push(pokemon);
+                        this.addFailedPokemon(pokemon, error);
+                        return null;
+                    }
+
+                    let species = null;
+                    try {
+                        species = await this.getPokemonSpecies(pokemon.name);
+                    } catch (error) {
+                        console.warn(`Could not fetch species data for ${pokemon.name}:`, error);
+                    }
+
+                    // Get additional data
+                    let encounters = [];
+                    try {
+                        encounters = await this.getPokemonEncounters(details.id);
+                    } catch (error) {
+                        console.warn(`Could not fetch encounters for ${pokemon.name}:`, error);
+                    }
+
+                    // Get evolution chain if available
+                    let evolutionChain = null;
+                    if (species && species.evolution_chain?.url) {
+                        const evolutionId = species.evolution_chain.url.split('/').slice(-2, -1)[0];
+                        try {
+                            evolutionChain = await this.getEvolutionChain(evolutionId);
+                        } catch (error) {
+                            console.warn(`Could not fetch evolution chain for ${pokemon.name}:`, error);
+                        }
+                    }
+
+                    // Get forms data
+                    let forms = [];
+                    try {
+                        if (details.forms && details.forms.length > 1) {
+                            const formPromises = details.forms.map(async (form) => {
+                                try {
+                                    // Extract form name from URL or use the form name directly
+                                    const formName = form.name || form.url.split('/').slice(-2, -1)[0];
+                                    const formData = await this.fetchData(form.url, `form_${formName}`);
+                                    return formData;
+                                } catch (error) {
+                                    const formName = form.name || 'unknown';
+                                    console.warn(`Could not fetch form ${formName}:`, error);
+                                    // Track failed form
+                                    this.addFailedForm(pokemon, formName, error);
+                                    return null;
+                                }
+                            });
+                            const formResults = await Promise.all(formPromises);
+                            forms = formResults.filter(f => f !== null);
+                        }
+                    } catch (error) {
+                        console.warn(`Could not fetch forms for ${pokemon.name}:`, error);
+                    }
+
+                    const completeData = {
+                        ...details,
+                        species: species || null,
+                        encounters: encounters || [],
+                        evolutionChain: evolutionChain || null,
+                        forms: forms || []
+                    };
+
+                    // Cache individual complete Pokemon data
+                    await this.cacheData(`complete_pokemon_${pokemon.name}`, completeData);
+                    await this.cacheData(`complete_pokemon_${details.id}`, completeData);
+
+                    return completeData;
                 });
 
                 const batchResults = await Promise.all(batchPromises);
@@ -337,16 +349,21 @@ class PokemonAPI {
                     console.log(`Retrying ${pokemon.name}...`);
                     const details = await this.getPokemon(pokemon.name);
                     if (!details) return;
-                    
-                    const species = await this.getPokemonSpecies(pokemon.name);
-                    
+
+                    let species = null;
+                    try {
+                        species = await this.getPokemonSpecies(pokemon.name);
+                    } catch (error) {
+                        console.warn(`Could not fetch species data for ${pokemon.name}:`, error);
+                    }
+
                     let encounters = [];
                     try {
                         encounters = await this.getPokemonEncounters(details.id);
                     } catch (error) {
                         console.warn(`Could not fetch encounters for ${pokemon.name}:`, error);
                     }
-                    
+
                     let evolutionChain = null;
                     if (species && species.evolution_chain?.url) {
                         const evolutionId = species.evolution_chain.url.split('/').slice(-2, -1)[0];
@@ -356,7 +373,7 @@ class PokemonAPI {
                             console.warn(`Could not fetch evolution chain for ${pokemon.name}:`, error);
                         }
                     }
-                    
+
                     // Get forms data
                     let forms = [];
                     try {
@@ -383,9 +400,9 @@ class PokemonAPI {
                     } catch (error) {
                         console.warn(`Could not fetch forms for ${pokemon.name}:`, error);
                     }
-                    
-                    const completeData = { 
-                        ...details, 
+
+                    const completeData = {
+                        ...details,
                         species: species || null,
                         encounters: encounters || [],
                         evolutionChain: evolutionChain || null,
