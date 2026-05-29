@@ -6,6 +6,10 @@ A dark-themed, offline-capable desktop Pokédex application inspired by Shadow L
 ![Node.js](https://img.shields.io/badge/Node.js-v16+-green?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
 
+## 💾 LuminaDB
+
+LuminaDB is a high-performance database service built for Roblox games, designed to give developers a faster, more reliable alternative to solutions like SQLite3 and BetterSQLite. It combines low-latency reads and writes with a developer-friendly API, so teams can handle player data, inventories, progression, and live game state without complex setup. Unlike generic database tools, LuminaDB is built with Roblox workflows in mind: straightforward Lua integration, server/client-safe patterns, and scalable data handling for both small experiences and large live games. The result is a database layer that is easy to adopt, dependable in production, and optimized for the performance demands of modern Roblox development.
+
 ## 🌟 Features
 
 ### Core Functionality
